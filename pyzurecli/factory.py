@@ -54,6 +54,11 @@ class AzureCLI(AwaitLoader):
     async def metadata(self) -> SimpleNamespace:
         from .user import UserSession
         ses: UserSession = await self.user.azure_profile
+        if ses is None: raise RuntimeError(f"{self}: UserSession returned '{ses}', "
+                                           f"which is unreadable! "
+                                           f"Either your login failed or there was "
+                                           f"an async race condition... Try restarting."
+                                           )
         subscription = ses.subscriptions[0]
         subscription_id = subscription.id
         tenant_id = subscription.tenantId
