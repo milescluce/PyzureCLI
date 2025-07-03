@@ -1,0 +1,26 @@
+# pyproject.toml
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyzurecli"
+version = "0.1.0"
+description = "Async Azure CLI automation via Docker-based isolation"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+  { name = "genderlesspit" }
+]
+dependencies = [
+  "async_property>=0.2.0",
+  "loguru>=0.5.3",
+  "dockwershell>=0.1.0",
+]
+
+[project.urls]
+Repository    = "https://github.com/genderlessput/pyzurecli"
+
+[project.scripts]
+# Entry through factory.py: exposes the `az` client
+pyzurecli = "pyzurecli.factory:debug"
