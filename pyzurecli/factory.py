@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from async_property import AwaitLoader, async_cached_property
 from loguru import logger as log
+import time
 
 @dataclass
 class GraphToken:
@@ -47,14 +48,16 @@ class AzureCLI(AwaitLoader):
 
     @async_cached_property
     async def app_registration(self):
-        from .app_registration import AzureCLIAppRegistration
+        from pyzurecli import AzureCLIAppRegistration
         return await AzureCLIAppRegistration.__async_init__(self)
 
     @async_cached_property
     async def metadata(self) -> SimpleNamespace:
-        from .user import UserSession
+        from pyzurecli import UserSession #abandoned rel imports lol
         ses: UserSession = await self.user.azure_profile
-        if ses is None: raise RuntimeError(f"{self}: UserSession returned '{ses}', "
+        if ses is None:
+            try: ses: UserSession = await self.user.azure_profile
+            except ses is None: raise RuntimeError(f"{self}: UserSession returned '{ses}', "
                                            f"which is unreadable! "
                                            f"Either your login failed or there was "
                                            f"an async race condition... Try restarting."
@@ -76,3 +79,4 @@ async def debug():
 
 if __name__ == "__main__":
     asyncio.run(debug())
+    time.sleep(500)

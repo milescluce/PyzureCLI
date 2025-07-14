@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from async_property import AwaitLoader, async_cached_property
 from loguru import logger as log
 
-from util import json_to_dataclass
+from .util import json_to_dataclass
 from .factory import AzureCLI, az
 from .user import ServicePrincipalCreds, ServicePrincipalContext
 from dockwershell.image import AsyncDockerImage
