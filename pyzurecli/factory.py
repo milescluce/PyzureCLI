@@ -56,7 +56,9 @@ class AzureCLI(AwaitLoader):
         from pyzurecli import UserSession #abandoned rel imports lol
         ses: UserSession = await self.user.azure_profile
         if ses is None:
-            try: ses: UserSession = await self.user.azure_profile
+            try:
+                ses: UserSession = await self.user.azure_profile
+                log.debug(ses)
             except ses is None: raise RuntimeError(f"{self}: UserSession returned '{ses}', "
                                            f"which is unreadable! "
                                            f"Either your login failed or there was "

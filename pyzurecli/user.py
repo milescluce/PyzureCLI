@@ -92,7 +92,9 @@ class AzureCLIUser(AwaitLoader):
     @cached_property
     def run_args(self):
         dir_wsl = path_to_wsl(self.paths.dir)
+        log.warning(dir_wsl)
         cfg_wsl = path_to_wsl(self.paths.azure_config)
+        log.warning(cfg_wsl)
         cmd = f"-v {dir_wsl}:/app -v {cfg_wsl}:/root/.azure -e AZURE_CONFIG_DIR=/root/.azure -w /app"
         return cmd
 
@@ -104,18 +106,19 @@ class AzureCLIUser(AwaitLoader):
     @async_cached_property
     async def azure_profile(self):
         image: AsyncDockerImage = await self.image
-        try:
-            log.debug(f"{self}: Attempting to load account from {self.paths.azure_profile}...")
-            with open(self.paths.azure_profile, "r", encoding="utf-8-sig") as file:
-                data = json.load(file)
-                log.debug(f"{self}: Found {self.paths.azure_profile}! Data:\n{data}")
-                ses = json_to_dataclass(UserSession, data)
-                return ses
-        except Exception as e:
-            log.error(f"{self}: Error while parsing UserSession...\n{e}")
-            log.warning(f"{self}: No account session found... Are you logged in?")
-            await image.run(cmd="az login --use-device-code", headless=False)
-            await image.run(cmd="az account show")
+        while True:
+            try:
+                log.debug(f"{self}: Attempting to load account from {self.paths.azure_profile}...")
+                with open(self.paths.azure_profile, "r", encoding="utf-8-sig") as file:
+                    data = json.load(file)
+                    log.debug(f"{self}: Found {self.paths.azure_profile}! Data:\n{data}")
+                    ses = json_to_dataclass(UserSession, data)
+                    return ses
+            except Exception as e:
+                log.error(f"{self}: Error while parsing UserSession...\n{e}")
+                log.warning(f"{self}: No account session found... Are you logged in?")
+                await image.run(cmd="az login --use-device-code", headless=False)
+                await image.run(cmd="az account show")
 
     @classmethod
     async def sp_from_user(cls, azure_cli: AzureCLI):

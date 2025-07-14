@@ -6,6 +6,8 @@ def json_to_dataclass(cls, data: dict):
     if not is_dataclass(cls):
         raise TypeError("Expected a dataclass type")
 
+    log.debug(data)
+
     result = {}
     hints = get_type_hints(cls)
 
