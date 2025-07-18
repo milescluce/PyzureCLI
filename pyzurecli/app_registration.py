@@ -1,7 +1,6 @@
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Optional
-
-from async_property import AwaitLoader, async_cached_property
 from loguru import logger as log
 
 from pyzurecli import az
@@ -16,7 +15,7 @@ class AppRegistrationCreds:
     objectId: Optional[str] = None
 
 
-class AzureCLIAppRegistration(AwaitLoader):
+class AzureCLIAppRegistration:
     """Manages Azure App Registrations for multi-tenant OAuth"""
 
     instances = {}
@@ -30,34 +29,34 @@ class AzureCLIAppRegistration(AwaitLoader):
         return f"[{self.dir.name.title()}.AppRegistration]"
 
     @classmethod
-    async def __async_init__(cls, azure_cli: az):
+    def __async_init__(cls, azure_cli: az):
         dir_name = azure_cli.dir.name
         if dir_name not in cls.instances:
             cls.instances[dir_name] = cls(azure_cli)
 
         instance = cls.instances[dir_name]
-        await instance.creds  # Initialize credentials
+        _ = instance.creds  # Initialize credentials
         return instance
 
-    @async_cached_property
-    async def creds(self) -> AppRegistrationCreds:
+    @cached_property
+    def creds(self) -> AppRegistrationCreds:
         """Get or create multi-tenant OAuth app registration"""
-        user_image = await self.azure_cli.user.image
+        user_image = self.azure_cli.user.image
         app_name = f"{self.dir.name.title()}-MultiTenant"
 
         # Check for existing app
-        existing_app = await self._find_existing_app(user_image, app_name)
+        existing_app = self._find_existing_app(user_image, app_name)
         if existing_app:
-            await self._ensure_multi_tenant_config(user_image, existing_app.appId)
+            self._ensure_multi_tenant_config(user_image, existing_app.appId)
             return existing_app
 
         # Create new multi-tenant app
-        return await self._create_multi_tenant_app(user_image, app_name)
+        return self._create_multi_tenant_app(user_image, app_name)
 
-    async def _find_existing_app(self, user_image, app_name: str) -> Optional[AppRegistrationCreds]:
+    def _find_existing_app(self, user_image, app_name: str) -> Optional[AppRegistrationCreds]:
         """Find existing app registration"""
         try:
-            result = await user_image.run(
+            result = user_image.run(
                 f'az ad app list --display-name "{app_name}" --only-show-errors',
                 headless=True
             )
@@ -69,7 +68,7 @@ class AzureCLIAppRegistration(AwaitLoader):
                 return AppRegistrationCreds(
                     appId=app_data["appId"],
                     displayName=app_data["displayName"],
-                    tenantId=await self._get_tenant_id(),
+                    tenantId=self._get_tenant_id(),
                     objectId=app_data.get("id")
                 )
         except Exception as e:
@@ -77,7 +76,7 @@ class AzureCLIAppRegistration(AwaitLoader):
 
         return None
 
-    async def _create_multi_tenant_app(self, user_image, app_name: str) -> AppRegistrationCreds:
+    def _create_multi_tenant_app(self, user_image, app_name: str) -> AppRegistrationCreds:
         """Create new multi-tenant app registration"""
         log.info(f"{self}: Creating multi-tenant OAuth app: {app_name}")
 
@@ -95,23 +94,23 @@ class AzureCLIAppRegistration(AwaitLoader):
             "--only-show-errors"
         ]
 
-        result = await user_image.run(" ".join(f'"{arg}"' if " " in arg else arg for arg in create_cmd), headless=True)
+        result = user_image.run(" ".join(f'"{arg}"' if " " in arg else arg for arg in create_cmd), headless=True)
 
         if not result.json:
             log.error(f"{self}: Failed to create app registration")
             raise RuntimeError("OAuth app registration creation failed")
 
-        app_data = result.json
+        app_data = result.json[0]
         log.success(f"{self}: Created multi-tenant app: {app_data['appId']}")
 
         return AppRegistrationCreds(
             appId=app_data["appId"],
             displayName=app_data["displayName"],
-            tenantId=await self._get_tenant_id(),
+            tenantId=self._get_tenant_id(),
             objectId=app_data.get("id")
         )
 
-    async def _ensure_multi_tenant_config(self, user_image, app_id: str):
+    def _ensure_multi_tenant_config(self, user_image, app_id: str):
         """Ensure existing app is configured for multi-tenant"""
         try:
             update_cmd = [
@@ -122,26 +121,26 @@ class AzureCLIAppRegistration(AwaitLoader):
                 "--only-show-errors"
             ]
 
-            await user_image.run(" ".join(update_cmd), headless=True)
+            user_image.run(" ".join(update_cmd), headless=True)
             log.success(f"{self}: Updated app {app_id} for multi-tenant")
 
         except Exception as e:
             log.warning(f"{self}: Could not update app config: {e}")
 
-    async def _get_tenant_id(self) -> str:
+    def _get_tenant_id(self) -> str:
         """Get current tenant ID"""
-        metadata = await self.azure_cli.metadata
+        metadata = self.azure_cli.metadata
         return metadata.tenant_id
 
-    @async_cached_property
-    async def client_id(self) -> str:
+    @cached_property
+    def client_id(self) -> str:
         """Get OAuth client ID"""
-        creds = await self.creds
+        creds = self.creds
         return creds.appId
 
-    async def generate_admin_consent_url(self, scopes: str = "User.Read Mail.Read Files.Read") -> str:
+    def generate_admin_consent_url(self, scopes: str = "User.Read Mail.Read Files.Read") -> str:
         """Generate admin consent URL for cross-tenant permissions"""
-        client_id = await self.client_id
+        client_id = self.client_id
 
         consent_url = (
             f"https://login.microsoftonline.com/common/adminconsent?"
@@ -153,10 +152,10 @@ class AzureCLIAppRegistration(AwaitLoader):
         log.info(f"{self}: Admin consent URL generated for app {client_id}")
         return consent_url
 
-    async def delete_app_registration(self):
+    def delete_app_registration(self):
         """Delete the OAuth app registration"""
-        creds = await self.creds
-        user_image = await self.azure_cli.user.image
+        creds = self.creds
+        user_image = self.azure_cli.user.image
 
-        await user_image.run(f"az ad app delete --id {creds.appId} --only-show-errors", headless=True)
+        user_image.run(f"az ad app delete --id {creds.appId} --only-show-errors", headless=True)
         log.info(f"{self}: Deleted app registration: {creds.appId}")

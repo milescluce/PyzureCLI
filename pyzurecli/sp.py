@@ -1,19 +1,17 @@
-import uuid
+from functools import cached_property
 from functools import cached_property
 from pathlib import Path
 from types import SimpleNamespace
 
-from async_property import AwaitLoader, async_cached_property
+from dockwershell import DockerImage, path_to_wsl
 from loguru import logger as log
 
-from .util import json_to_dataclass
-from .factory import AzureCLI, az
+from pyzurecli import AzureCLI, az
 from .user import ServicePrincipalCreds, ServicePrincipalContext
-from dockwershell.image import AsyncDockerImage
-from dockwershell.manager import path_to_wsl, Docker
+from .util import json_to_dataclass
 
 
-class AzureCLIServicePrincipal(AwaitLoader):
+class AzureCLIServicePrincipal:
     instances = {}
     dockerfile: str = """
     FROM mcr.microsoft.com/azure-cli
@@ -23,26 +21,16 @@ class AzureCLIServicePrincipal(AwaitLoader):
     def __init__(self, azure_cli: az):
         self.azure_cli: AzureCLI = azure_cli
         self.dir: Path = azure_cli.dir
-        self.user: AsyncDockerImage = azure_cli.user.image
+        self.user: DockerImage = azure_cli.user.image
         _ = self.paths
-        log.success(f"{self}: Successfully initialized!")
+        # log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
         return f"[{self.azure_cli.dir.name.title()}.AzureCLI.ServicePrincipal]"
 
-    @classmethod
-    async def __async_init__(cls, azure_cli: AzureCLI):
-        name = str(uuid.uuid4())
-        if name not in cls.instances:
-            cls.instances[name] = cls(azure_cli)
-        inst = cls.instances[name]
-        _ = await inst.login
-
-        return inst
-
     @cached_property
     def paths(self) -> SimpleNamespace:
-        dir: Path = self.dir / "azure" / "sp" #type-ignore
+        dir: Path = self.dir / "azure" / "sp"  # type-ignore
         dir.mkdir(exist_ok=True, parents=True)
 
         dockerfile_path: Path = dir / "Dockerfile.sp"
@@ -60,19 +48,22 @@ class AzureCLIServicePrincipal(AwaitLoader):
             azure_config=azure_config
         )
 
-    @async_cached_property
-    async def creds(self) -> ServicePrincipalCreds | str:
-        meta = await self.azure_cli.metadata
-        data = await self.user.run(
-            f"az ad sp create-for-rbac -n mileslib --role Contributor --scope /subscriptions/{meta.subscription_id}",
+    @cached_property
+    def creds(self) -> ServicePrincipalCreds | str:
+        log.debug(f"{self}: Attempting to get service principal credentials...")
+        meta = self.azure_cli.metadata
+        data = self.user.run(
+            f"az ad sp create-for-rbac -n mileslib --role Contributor --scope /subscriptions/{meta.subscription_id} --output json",
             headless=True)
-        log.warning(data.json)
-        creds = json_to_dataclass(ServicePrincipalCreds, data.json)
+        log.success(f"$$$$$$$$${data.json}")
+        if not data.json: log.warning(f"{self}: Could not extract json for service principal credentials!")
+        creds = json_to_dataclass(ServicePrincipalCreds, data.json[0])
+        if creds.appId: log.success(f"{self}: Successfully initialized service principal in AzureCLI!")
         return creds
 
-    @async_cached_property
-    async def run_args(self):
-        creds: ServicePrincipalCreds = await self.creds
+    @cached_property
+    def run_args(self):
+        creds: ServicePrincipalCreds = self.creds
         dir_wsl = path_to_wsl(self.paths.dir)
         cfg_wsl = path_to_wsl(self.paths.azure_config)
         cmd = f"-v {dir_wsl}:/app -v {cfg_wsl}:/root/.azure -e AZURE_CONFIG_DIR=/root/.azure -w /app"
@@ -84,22 +75,22 @@ class AzureCLIServicePrincipal(AwaitLoader):
         cmd = f"{cmd} {" ".join(env)}"
         return cmd
 
-    @async_cached_property
-    async def image(self) -> AsyncDockerImage:
-        inst: AsyncDockerImage = await Docker.new(self.paths.dockerfile, run_args=await self.run_args, rebuild=True)
+    @cached_property
+    def image(self):
+        inst: DockerImage = DockerImage(self.paths.dockerfile, run_args=self.run_args, rebuild=True)
         return inst
 
-    @async_cached_property
-    async def login(self):
-        image: AsyncDockerImage = await self.image
-        creds: ServicePrincipalCreds = await self.creds
+    @cached_property
+    def login(self):
+        image: DockerImage = self.image
+        creds: ServicePrincipalCreds = self.creds
         cmd = (
             f"az login --service-principal "
             f"--username {creds.appId} "
             f"--password {creds.password} "
             f"--tenant {creds.tenant}"
         )
-        out = await image.run(cmd, headless=True)
+        out = image.run(cmd, headless=True)
         subscription_data = out.json[0] if isinstance(out.json, list) else out.json
         ses = json_to_dataclass(ServicePrincipalContext, subscription_data)
         return ses

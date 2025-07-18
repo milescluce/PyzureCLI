@@ -5,13 +5,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import List
 
-from async_property import AwaitLoader, async_cached_property
+from dockwershell import path_to_wsl, DockerImage
 from loguru import logger as log
 
-from .util import json_to_dataclass
 from .factory import AzureCLI
-from dockwershell import AsyncDockerImage
-from dockwershell.manager import path_to_wsl, Docker
+from .util import json_to_dataclass
+
 
 @dataclass
 class AzureUser:
@@ -40,7 +39,7 @@ class UserSession:
     installationId: str
 
 
-class AzureCLIUser(AwaitLoader):
+class AzureCLIUser:
     instances = {}
     dockerfile: str = """
     FROM mcr.microsoft.com/azure-cli
@@ -58,13 +57,13 @@ class AzureCLIUser(AwaitLoader):
         return f"[{self.azure_cli.dir.name.title()}.AzureCLI.User]"
 
     @classmethod
-    async def __async_init__(cls, azure_cli: AzureCLI):
+    def __async_init__(cls, azure_cli: AzureCLI):
         dir = azure_cli.dir
         if dir.name not in cls.instances:
             cls.instances[dir.name] = cls(azure_cli)
             inst: AzureCLIUser = cls.instances[dir.name]
             log.debug(f"{inst}: Attempting to login!")
-            await inst.azure_profile
+            _ = inst.azure_profile
         return cls.instances[dir.name]
 
     @cached_property
@@ -98,34 +97,35 @@ class AzureCLIUser(AwaitLoader):
         cmd = f"-v {dir_wsl}:/app -v {cfg_wsl}:/root/.azure -e AZURE_CONFIG_DIR=/root/.azure -w /app"
         return cmd
 
-    @async_cached_property
-    async def image(self):
-        inst: AsyncDockerImage = await Docker.new(self.paths.dockerfile, run_args=self.run_args, rebuild=True)
+    @cached_property
+    def image(self):
+        inst: DockerImage = DockerImage(self.paths.dockerfile, run_args=self.run_args, rebuild=True)
         return inst
 
-    @async_cached_property
-    async def azure_profile(self):
-        image: AsyncDockerImage = await self.image
+    @cached_property
+    def azure_profile(self):
+        image: DockerImage = self.image
         while True:
             try:
                 log.debug(f"{self}: Attempting to load account from {self.paths.azure_profile}...")
                 with open(self.paths.azure_profile, "r", encoding="utf-8-sig") as file:
                     data = json.load(file)
+                    if data == {}: raise ValueError
                     log.debug(f"{self}: Found {self.paths.azure_profile}! Data:\n{data}")
                     ses = json_to_dataclass(UserSession, data)
                     return ses
             except Exception as e:
                 log.error(f"{self}: Error while parsing UserSession...\n{e}")
                 log.warning(f"{self}: No account session found... Are you logged in?")
-                await image.run(cmd="az login --use-device-code", headless=False)
-                await image.run(cmd="az account show")
+                image.run(cmd="az login --use-device-code", headless=False)
+                image.run(cmd="az account show")
 
     @classmethod
-    async def sp_from_user(cls, azure_cli: AzureCLI):
+    def sp_from_user(cls, azure_cli: AzureCLI):
         from .sp import AzureCLIServicePrincipal
         if not getattr(azure_cli, "user", None):
-            await cls.__async_init__(azure_cli)
-        sp = await AzureCLIServicePrincipal.__async_init__(azure_cli)
+            cls.__async_init__(azure_cli)
+        sp = AzureCLIServicePrincipal(azure_cli)
         setattr(azure_cli, "service_principal", sp)
         if sp is None: raise RuntimeError(f"{azure_cli}: Failed to attach Service Principal!")
         if not isinstance(sp, AzureCLIServicePrincipal): raise RuntimeError
