@@ -34,7 +34,7 @@ class AzureCLI:
 
     @cached_property
     def user(self):
-        from pyzurecli.user import AzureCLIUser
+        from src.pyzurecli.user import AzureCLIUser
         return AzureCLIUser.__async_init__(self)
 
     @cached_property
@@ -43,12 +43,12 @@ class AzureCLI:
 
     @cached_property
     def app_registration(self):
-        from pyzurecli.app_registration import AzureCLIAppRegistration
+        from src.pyzurecli.app_registration import AzureCLIAppRegistration
         return AzureCLIAppRegistration.__async_init__(self)
 
     @cached_property
     def metadata(self) -> SimpleNamespace:
-        from pyzurecli.user import UserSession  # abandoned rel imports lol
+        from src.pyzurecli.user import UserSession  # abandoned rel imports lol
         ses: UserSession = self.user.azure_profile
         if ses is None:
             try:

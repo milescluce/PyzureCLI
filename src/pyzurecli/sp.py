@@ -1,12 +1,11 @@
 from functools import cached_property
-from functools import cached_property
 from pathlib import Path
 from types import SimpleNamespace
 
 from dockwershell import DockerImage, path_to_wsl
 from loguru import logger as log
 
-from pyzurecli import AzureCLI, az
+from src.pyzurecli import AzureCLI, az
 from .user import ServicePrincipalCreds, ServicePrincipalContext
 from .util import json_to_dataclass
 

@@ -11,7 +11,8 @@ PyzureCLI runs every `az` command inside a disposable Docker container, providin
 ```python
 import asyncio
 from pathlib import Path
-from pyzurecli import az
+from src.pyzurecli import az
+
 
 async def main():
     # Initialize AzureCLI client (entry via factory.py)
@@ -33,6 +34,7 @@ async def main():
     # Generate an admin-consent URL
     url = await ar.generate_admin_consent_url()
     print("Consent URL:", url)
+
 
 asyncio.run(main())
 ```

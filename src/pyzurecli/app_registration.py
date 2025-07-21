@@ -3,7 +3,7 @@ from functools import cached_property
 from typing import Optional
 from loguru import logger as log
 
-from pyzurecli import az
+from src.pyzurecli import az
 
 
 @dataclass

@@ -1,12 +1,13 @@
 import time
 from pathlib import Path
-from tabnanny import verbose
 
-from propcache import cached_property
+from functools import cached_property
+from singleton_decorator import singleton
 from toomanythreads import ThreadedServer
 
-from pyzurecli import AzureCLI
+from src.pyzurecli import AzureCLI
 
+@singleton
 class PyzureServer(ThreadedServer):
     def __init__(self,
         host: str = None,
