@@ -1,6 +1,8 @@
 from dataclasses import fields, is_dataclass, MISSING
 from typing import get_type_hints, get_origin, get_args
+
 from loguru import logger as log
+
 
 def json_to_dataclass(cls, data: dict):
     if not is_dataclass(cls):
@@ -49,8 +51,10 @@ def json_to_dataclass(cls, data: dict):
 
     return cls(**result)
 
+
 import json
 import re
+
 
 def from_str_extract_json(text: str) -> dict:
     match = re.search(r'\{.*}', text, re.DOTALL)

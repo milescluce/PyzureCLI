@@ -20,17 +20,16 @@ class GraphToken:
 
 @singleton
 class AzureCLI:
-    instance = None
-
-    def __init__(self, dir: Path):
-        self.dir = dir
+    def __init__(self, cwd: Path = None):
+        self.cwd = cwd
+        if not self.cwd: self.cwd = Path.cwd()
         _ = self.user
         _ = self.service_principal
         _ = self.app_registration
         log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
-        return f"[{self.dir.name.title()}.AzureCLI]"
+        return f"[{self.cwd.name.title()}.AzureCLI]"
 
     @cached_property
     def user(self):
@@ -43,8 +42,8 @@ class AzureCLI:
 
     @cached_property
     def app_registration(self):
-        from src.pyzurecli.app_registration import AzureCLIAppRegistration
-        return AzureCLIAppRegistration.__async_init__(self)
+        from src.pyzurecli.app_registration import App
+        return App(self)
 
     @cached_property
     def metadata(self) -> SimpleNamespace:
@@ -69,6 +68,14 @@ class AzureCLI:
             tenant_id=tenant_id
         )
 
+    @cached_property
+    def tenant_id(self):
+        return self.metadata.tenant_id
+
+    @cached_property
+    def subscription_id(self):
+        return self.metadata.subscription_id
+
 
 def debug():
     AzureCLI(Path.cwd())
@@ -76,4 +83,4 @@ def debug():
 
 if __name__ == "__main__":
     debug()
-    time.sleep(500)
+    time.sleep(50)

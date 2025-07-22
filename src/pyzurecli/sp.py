@@ -19,30 +19,30 @@ class AzureCLIServicePrincipal:
 
     def __init__(self, azure_cli: az):
         self.azure_cli: AzureCLI = azure_cli
-        self.dir: Path = azure_cli.dir
+        self.cwd: Path = azure_cli.cwd
         self.user: DockerImage = azure_cli.user.image
         _ = self.paths
         # log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
-        return f"[{self.azure_cli.dir.name.title()}.AzureCLI.ServicePrincipal]"
+        return f"[{self.azure_cli.cwd.name.title()}.AzureCLI.ServicePrincipal]"
 
     @cached_property
     def paths(self) -> SimpleNamespace:
-        dir: Path = self.dir / "azure" / "sp"  # type-ignore
-        dir.mkdir(exist_ok=True, parents=True)
+        cwd: Path = self.cwd / "azure" / "sp"  # type-ignore
+        cwd.mkdir(exist_ok=True, parents=True)
 
-        dockerfile_path: Path = dir / "Dockerfile.sp"
+        dockerfile_path: Path = cwd / "Dockerfile.sp"
         dockerfile_path.touch(exist_ok=True)
         with open(dockerfile_path, "w", encoding="utf-8") as f: f.write(self.dockerfile)
 
-        azure_config: Path = dir / ".azure"
+        azure_config: Path = cwd / ".azure"
         azure_config.mkdir(exist_ok=True)
         azure_cmds: Path = azure_config / "commands"
         azure_cmds.mkdir(exist_ok=True)
 
         return SimpleNamespace(
-            dir=dir,
+            dir=cwd,
             dockerfile=dockerfile_path,
             azure_config=azure_config
         )

@@ -48,17 +48,17 @@ class AzureCLIUser:
 
     def __init__(self, azure_cli: AzureCLI):
         self.azure_cli = azure_cli
-        self.dir: Path = azure_cli.dir
+        self.cwd: Path = azure_cli.cwd
         _ = self.paths
         _ = self.run_args
         log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
-        return f"[{self.azure_cli.dir.name.title()}.AzureCLI.User]"
+        return f"[{self.azure_cli.cwd.name.title()}.AzureCLI.User]"
 
     @classmethod
     def __async_init__(cls, azure_cli: AzureCLI):
-        dir = azure_cli.dir
+        dir = azure_cli.cwd
         if dir.name not in cls.instances:
             cls.instances[dir.name] = cls(azure_cli)
             inst: AzureCLIUser = cls.instances[dir.name]
@@ -68,7 +68,7 @@ class AzureCLIUser:
 
     @cached_property
     def paths(self) -> SimpleNamespace:
-        dir: Path = self.dir / "azure" / "user"
+        dir: Path = self.cwd / "azure" / "user"
         dir.mkdir(exist_ok=True, parents=True)
 
         dockerfile: Path = dir / "Dockerfile.user"
