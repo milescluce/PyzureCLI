@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Type
 
 from loguru import logger as log
-from singleton_decorator import singleton
 from starlette.responses import Response
 from toomanyports import PortManager
 from toomanysessions import SessionedServer, Session, User, Sessions, Users
@@ -22,7 +21,6 @@ class PyzureServerSession(Session):
     graph_api: GraphAPI = None
 
 
-@singleton
 class PyzureServer(SessionedServer):
     def __init__(
             self,
@@ -68,6 +66,7 @@ class PyzureServer(SessionedServer):
         )
         _ = self.azure_cli
 
+    # noinspection PyUnusedLocal
     async def authentication_model(self, session: PyzureServerSession, session_name, redirect_uri):
         time.sleep(session.throttle)
         result = self.azure_cli.msal.public_client.acquire_token_interactive(
