@@ -1,13 +1,42 @@
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from types import SimpleNamespace
+from typing import List
 
 from dockwershell import DockerImage, path_to_wsl
 from loguru import logger as log
 
-from src.pyzurecli import AzureCLI, az
-from .user import ServicePrincipalCreds, ServicePrincipalContext
+from .factory import AzureCLI
 from .util import json_to_dataclass
+
+
+@dataclass(slots=True)
+class ServicePrincipalCreds:
+    appId: str
+    displayName: str
+    password: str
+    tenant: str
+
+
+@dataclass
+class SPUser:
+    name: str  # this is the clientId of the service principal
+    type: str  # always "servicePrincipal"
+
+
+@dataclass
+class ServicePrincipalContext:
+    cloudName: str
+    homeTenantId: str
+    id: str  # subscriptionId
+    isDefault: bool
+    managedByTenants: List  # usually empty unless you're delegating mgmt
+    name: str  # sub name e.g. "Azure subscription 1"
+    # state: str                   # "Enabled" or "Disabled"
+    tenantId: str
+    # actual tenant used
+    user: SPUser
 
 
 class AzureCLIServicePrincipal:
@@ -17,12 +46,12 @@ class AzureCLIServicePrincipal:
     WORKDIR /app
     """
 
-    def __init__(self, azure_cli: az):
+    def __init__(self, azure_cli: AzureCLI):
         self.azure_cli: AzureCLI = azure_cli
         self.cwd: Path = azure_cli.cwd
         self.user: DockerImage = azure_cli.user.image
         _ = self.paths
-        # log.success(f"{self}: Successfully initialized!")
+        log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
         return f"[{self.azure_cli.cwd.name.title()}.AzureCLI.ServicePrincipal]"

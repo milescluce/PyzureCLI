@@ -5,7 +5,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from loguru import logger as log
+from msal import PublicClientApplication
 from singleton_decorator import singleton
+from toomanyports import PortManager
 
 
 @dataclass
@@ -17,12 +19,21 @@ class GraphToken:
     tenant: str
     tokenType: str
 
-
 @singleton
 class AzureCLI:
-    def __init__(self, cwd: Path = None):
+    def __init__(
+            self,
+            cwd: Path = Path.cwd(),
+            pyzure_server_port: int = None,
+    ):
         self.cwd = cwd
-        if not self.cwd: self.cwd = Path.cwd()
+        self.pyzure_server_port = pyzure_server_port
+        self.msal_server_port = (self.pyzure_server_port + 1) if self.pyzure_server_port else PortManager.random_port()
+        self.msal_redirect_uri = f"http://localhost:{self.msal_server_port}"
+        # if redirect_uri: log.debug(f"{self}: Registered redirect_uri {redirect_uri}.")
+        # if not redirect_uri: log.warning(
+        #     f"{self}: Without a specified Redirect URI, your Azure App won't be able to communicate effectively."
+        #     f" Ignore if you are just using AzureCLI programmatically without user interaction.")
         _ = self.user
         _ = self.service_principal
         _ = self.app_registration
@@ -33,21 +44,27 @@ class AzureCLI:
 
     @cached_property
     def user(self):
-        from src.pyzurecli.user import AzureCLIUser
-        return AzureCLIUser.__async_init__(self)
+        from .user import AzureCLIUser
+        return AzureCLIUser(self)
 
     @cached_property
     def service_principal(self):
-        return self.user.sp_from_user(self)
+        from .sp import AzureCLIServicePrincipal
+        return AzureCLIServicePrincipal(self)
+
+    @cached_property
+    def msal(self):
+        from .pyzuremsal import MSAL
+        return MSAL(self)
 
     @cached_property
     def app_registration(self):
-        from src.pyzurecli.app_registration import App
+        from .app_registration import App
         return App(self)
 
     @cached_property
     def metadata(self) -> SimpleNamespace:
-        from src.pyzurecli.user import UserSession  # abandoned rel imports lol
+        from .user import UserSession  # abandoned rel imports lol
         ses: UserSession = self.user.azure_profile
         if ses is None:
             try:

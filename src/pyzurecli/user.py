@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from types import SimpleNamespace
-from typing import List
 
 from dockwershell import path_to_wsl, DockerImage
 from loguru import logger as log
@@ -40,7 +39,6 @@ class UserSession:
 
 
 class AzureCLIUser:
-    instances = {}
     dockerfile: str = """
     FROM mcr.microsoft.com/azure-cli
     WORKDIR /app
@@ -51,20 +49,11 @@ class AzureCLIUser:
         self.cwd: Path = azure_cli.cwd
         _ = self.paths
         _ = self.run_args
+        _ = self.azure_profile
         log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
         return f"[{self.azure_cli.cwd.name.title()}.AzureCLI.User]"
-
-    @classmethod
-    def __async_init__(cls, azure_cli: AzureCLI):
-        dir = azure_cli.cwd
-        if dir.name not in cls.instances:
-            cls.instances[dir.name] = cls(azure_cli)
-            inst: AzureCLIUser = cls.instances[dir.name]
-            log.debug(f"{inst}: Attempting to login!")
-            _ = inst.azure_profile
-        return cls.instances[dir.name]
 
     @cached_property
     def paths(self) -> SimpleNamespace:
@@ -120,18 +109,6 @@ class AzureCLIUser:
                 image.run(cmd="az login --use-device-code", headless=False)
                 image.run(cmd="az account show")
 
-    @classmethod
-    def sp_from_user(cls, azure_cli: AzureCLI):
-        from .sp import AzureCLIServicePrincipal
-        if not getattr(azure_cli, "user", None):
-            cls.__async_init__(azure_cli)
-        sp = AzureCLIServicePrincipal(azure_cli)
-        setattr(azure_cli, "service_principal", sp)
-        if sp is None: raise RuntimeError(f"{azure_cli}: Failed to attach Service Principal!")
-        if not isinstance(sp, AzureCLIServicePrincipal): raise RuntimeError
-        return sp
-
-
 # class GraphAPI:
 #     @cached_property
 #     def graph_token(self):
@@ -140,30 +117,3 @@ class AzureCLIUser:
 #             headless=True,
 #             expect_json=True)
 #         return self._GraphToken(**token_metadata)
-
-@dataclass(slots=True)
-class ServicePrincipalCreds:
-    appId: str
-    displayName: str
-    password: str
-    tenant: str
-
-
-@dataclass
-class SPUser:
-    name: str  # this is the clientId of the service principal
-    type: str  # always "servicePrincipal"
-
-
-@dataclass
-class ServicePrincipalContext:
-    cloudName: str
-    homeTenantId: str
-    id: str  # subscriptionId
-    isDefault: bool
-    managedByTenants: List  # usually empty unless you're delegating mgmt
-    name: str  # sub name e.g. "Azure subscription 1"
-    # state: str                   # "Enabled" or "Disabled"
-    tenantId: str
-    # actual tenant used
-    user: SPUser

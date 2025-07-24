@@ -12,7 +12,8 @@ dependencies = [
     "toomanythreads (>=0.2.3,<0.3.0)",
     "dockwershell (>=0.6,<0.7)",
     "loguru (>=0.7.3,<0.8.0)",
-    "python-multipart (>=0.0.20,<0.0.21)"
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "msal (>=1.33.0,<2.0.0)"
 ]
 
 [tool.poetry]
