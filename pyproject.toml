@@ -1,6 +1,6 @@
 [project]
 name = "pyzurecli"
-version = "0.7"
+version = "0.7.1"
 description = "Azure CLI automation via Docker-based isolation"
 authors = [
     {name = "Miles Copeland Luce"}
@@ -15,7 +15,8 @@ dependencies = [
     "python-multipart (>=0.0.20,<0.0.21)",
     "msal (>=1.33.0,<2.0.0)",
     "toomanyports (>=0.1.1,<0.2.0)",
-    "httpx (>=0.28.1,<0.29.0)"
+    "httpx (>=0.28.1,<0.29.0)",
+    "toomanysessions (>=0.1.6,<0.2.0)"
 ]
 
 [tool.poetry]
