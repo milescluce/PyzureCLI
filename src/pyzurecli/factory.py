@@ -5,7 +5,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from loguru import logger as log
-from msal import PublicClientApplication
 from singleton_decorator import singleton
 from toomanyports import PortManager
 
@@ -18,6 +17,7 @@ class GraphToken:
     subscription: str
     tenant: str
     tokenType: str
+
 
 @singleton
 class AzureCLI:
@@ -37,6 +37,7 @@ class AzureCLI:
         _ = self.user
         _ = self.service_principal
         _ = self.app_registration
+        _ = self.graph_api
         log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):
@@ -61,6 +62,16 @@ class AzureCLI:
     def app_registration(self):
         from .app_registration import App
         return App(self)
+
+    @cached_property
+    def graph_api(self):
+        from .graph import GraphAPI
+        result = self.user.image.run("az account get-access-token")
+        result = result.json[0]
+        log.debug(f"{self}: Retrieved GraphAPI metadata: {result}")
+        token = result["accessToken"]
+        log.debug(f"{self}: Retrieved token {token[:4]}...")
+        return GraphAPI(token=token)
 
     @cached_property
     def metadata(self) -> SimpleNamespace:

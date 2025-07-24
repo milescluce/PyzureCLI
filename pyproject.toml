@@ -1,9 +1,9 @@
 [project]
 name = "pyzurecli"
-version = "0.6.2"
-description = "Async Azure CLI automation via Docker-based isolation"
+version = "0.7"
+description = "Azure CLI automation via Docker-based isolation"
 authors = [
-    {name = "genderlesspit",email = "59433707+genderlesspit@users.noreply.github.com"}
+    {name = "Miles Copeland Luce"}
 ]
 readme = "README.md"
 requires-python =  ">=3.13,<4.0"
@@ -13,7 +13,9 @@ dependencies = [
     "dockwershell (>=0.6,<0.7)",
     "loguru (>=0.7.3,<0.8.0)",
     "python-multipart (>=0.0.20,<0.0.21)",
-    "msal (>=1.33.0,<2.0.0)"
+    "msal (>=1.33.0,<2.0.0)",
+    "toomanyports (>=0.1.1,<0.2.0)",
+    "httpx (>=0.28.1,<0.29.0)"
 ]
 
 [tool.poetry]

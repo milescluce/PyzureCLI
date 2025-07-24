@@ -1,6 +1,6 @@
 from msal import PublicClientApplication
 
-from src.pyzurecli import AzureCLI
+from .factory import AzureCLI
 
 
 class MSAL:
