@@ -26,7 +26,7 @@ class AzureCLIAppRegistration:
             setattr(self, kwarg, kwargs.pop(kwarg))
         self.azure_cli = azure_cli
         self.cwd = azure_cli.cwd
-        self.redirect_uri = self.azure_cli.msal_redirect_uri
+        self.redirect_uri = self.azure_cli.redirect_uri
         self.tenant_id = self.azure_cli.metadata.tenant_id
         self.client_id = self.creds.appId
         log.success(f"{self}: Successfully initialized!")

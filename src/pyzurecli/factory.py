@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from loguru import logger as log
 from singleton_decorator import singleton
 from toomanyports import PortManager
+from toomanysessions import GraphAPI
 
 
 @dataclass
@@ -24,16 +25,14 @@ class AzureCLI:
     def __init__(
             self,
             cwd: Path = Path.cwd(),
-            pyzure_server_port: int = None,
+            redirect_uri = None
     ):
         self.cwd = cwd
-        self.pyzure_server_port = pyzure_server_port
-        self.msal_server_port = (self.pyzure_server_port + 1) if self.pyzure_server_port else PortManager.random_port()
-        self.msal_redirect_uri = f"http://localhost:{self.msal_server_port}"
-        # if redirect_uri: log.debug(f"{self}: Registered redirect_uri {redirect_uri}.")
-        # if not redirect_uri: log.warning(
-        #     f"{self}: Without a specified Redirect URI, your Azure App won't be able to communicate effectively."
-        #     f" Ignore if you are just using AzureCLI programmatically without user interaction.")
+        if redirect_uri: log.debug(f"{self}: Registered redirect_uri {redirect_uri}.")
+        if not redirect_uri: log.warning(
+            f"{self}: Without a specified Redirect URI, your Azure App won't be able to communicate with effectively."
+            f" Ignore if you are just using AzureCLI programmatically without user interaction.")
+        self.redirect_uri = redirect_uri
         _ = self.user
         _ = self.service_principal
         _ = self.app_registration
@@ -54,18 +53,12 @@ class AzureCLI:
         return AzureCLIServicePrincipal(self)
 
     @cached_property
-    def msal(self):
-        from .pyzuremsal import MSAL
-        return MSAL(self)
-
-    @cached_property
     def app_registration(self):
         from .app_registration import App
         return App(self)
 
     @cached_property
     def graph_api(self):
-        from .graph import GraphAPI
         result = self.user.image.run("az account get-access-token")
         result = result.json[0]
         log.debug(f"{self}: Retrieved GraphAPI metadata: {result}")

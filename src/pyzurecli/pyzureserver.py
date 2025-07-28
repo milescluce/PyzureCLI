@@ -5,21 +5,13 @@ from pathlib import Path
 from typing import Type
 
 from loguru import logger as log
-from starlette.responses import Response
+from starlette.responses import Response, RedirectResponse, JSONResponse
 from toomanyports import PortManager
-from toomanysessions import SessionedServer, Session, User, Sessions, Users
+from toomanysessions import SessionedServer, Session, User, Sessions, Users, MicrosoftOAuth, GraphAPI
 
 from .factory import AzureCLI
-from .graph import GraphAPI, Me
 
 DEBUG = True
-
-
-@dataclass
-class PyzureServerSession(Session):
-    graph_token: str = None
-    graph_api: GraphAPI = None
-
 
 class PyzureServer(SessionedServer):
     def __init__(
@@ -29,8 +21,7 @@ class PyzureServer(SessionedServer):
             cwd: Path = Path.cwd(),
             session_name: str = "session",
             session_age: int = (3600 * 8),
-            # session_model: Type[Session] = Session,
-            # authentication_model: Type[Callable] = authenticate,
+            session_model: Type[Session] = Session,
             user_model: Type[User] = User,
             restrict_to_domain: str = None,
             verbose: bool = DEBUG,
@@ -40,19 +31,50 @@ class PyzureServer(SessionedServer):
         self.cwd = cwd
         self.session_name = session_name
         self.session_age = session_age
-        self.session_model = PyzureServerSession
+        self.session_model = session_model
         self.sessions = Sessions(
-            self.session_model,
-            self.authentication_model,
-            verbose,
+            session_model=self.session_model,
+            session_name=self.session_name,
+            verbose=verbose,
         )
         self.user_model = user_model
         self.users = Users(
             self.user_model,
             self.user_model.create,
         )
-        self.restrict_to_domain = restrict_to_domain
+        self.scopes = [
+            # User and profile
+            "User.ReadWrite.All",
+            "Directory.ReadWrite.All",
+
+            # Files and SharePoint
+            "Files.ReadWrite.All",
+            "Sites.ReadWrite.All",
+
+            # Mail and Calendar
+            "Mail.ReadWrite",
+            "Calendars.ReadWrite",
+
+            # Teams
+            "Team.ReadBasic.All",
+            "Channel.ReadBasic.All",
+
+            # Applications
+            "Application.ReadWrite.All",
+
+            # Groups
+            "Group.ReadWrite.All",
+
+            # Device management
+            "Device.ReadWrite.All",
+
+            # Security
+            "SecurityEvents.ReadWrite.All",
+        ]
+        self.scopes_str = " ".join(self.scopes)
         self.verbose = verbose
+
+        _ = self.authentication_model
 
         super().__init__(
             host=self.host,
@@ -60,53 +82,30 @@ class PyzureServer(SessionedServer):
             session_name=self.session_name,
             session_age=self.session_age,
             session_model=self.session_model,
-            authentication_model=self.authentication_model,
+            authentication_model=self.authentication_model, #type: ignore
             user_model=self.user_model,
             verbose=self.verbose,
         )
-        _ = self.azure_cli
 
-    # noinspection PyUnusedLocal
-    async def authentication_model(self, session: PyzureServerSession, session_name, redirect_uri):
-        time.sleep(session.throttle)
-        result = self.azure_cli.msal.public_client.acquire_token_interactive(
-            scopes=["User.Read"],
-            port=self.azure_cli.msal_server_port
+    @cached_property
+    def authentication_model(self):
+        inst = MicrosoftOAuth(
+            self,
+            tenant_id=self.azure_cli.tenant_id,
+            client_id=self.azure_cli.app_registration.client_id,
+            scopes=self.scopes_str
         )
-        if not result:
-            session.authenticated = False
-            return Response("Authentication Error", 401)
-        session.graph_token = result["access_token"]
-        log.debug(f"{self}: Got MSAL information from session {session.token}:\n  - result={result}")
+        return inst
 
-        session.graph_api = GraphAPI(session.graph_token)
-        me: Me = await session.graph_api.me
-
-        if not self.restrict_to_domain:
-            if me.mail:
-                if self.restrict_to_domain in me.mail:
-                    session.authenticated = True
-                    session.throttle = 0
-                    return session
-            else:
-                if self.restrict_to_domain in me.userPrincipalName:
-                    session.authenticated = True
-                    session.throttle = 0
-                    return session
-        else:
-            session.authenticated = True
-            session.throttle = 0
-            return session
-
-        session.authenticated = False
-        session.throttle = (session.throttle + 1) * 5
-        return session
+    @cached_property
+    def redirect_uri(self):
+        return f"{self.url}/microsoft_oauth/callback"
 
     @cached_property
     def azure_cli(self) -> AzureCLI:
         inst = AzureCLI(
             cwd=self.cwd,
-            pyzure_server_port=self.port
+            redirect_uri=self.redirect_uri
         )
         return inst
 
@@ -114,9 +113,3 @@ class PyzureServer(SessionedServer):
     def app_registration(self):
         azure_cli = self.azure_cli
         return azure_cli.app_registration
-
-
-if __name__ == "__main__":
-    p = PyzureServer()
-    p.thread.start()
-    time.sleep(100)
