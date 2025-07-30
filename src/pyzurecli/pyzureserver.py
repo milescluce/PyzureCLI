@@ -23,7 +23,8 @@ class PyzureServer(SessionedServer):
             session_age: int = (3600 * 8),
             session_model: Type[Session] = Session,
             user_model: Type[User] = User,
-            restrict_to_domain: str = None,
+            user_whitelist: list = None,
+            tenant_whitelist: list = None,
             verbose: bool = DEBUG,
     ):
         self.host = host
@@ -42,9 +43,13 @@ class PyzureServer(SessionedServer):
             self.user_model,
             self.user_model.create,
         )
+        self.user_whitelist = user_whitelist
+        self.tenant_whitelist = [self.azure_cli.tenant_id]
+        if tenant_whitelist: self.tenant_whitelist = self.tenant_whitelist + tenant_whitelist
         self.scopes = [
-            # User and profile
+            # User, Tenant, and profile
             "User.ReadWrite.All",
+            "Organization.ReadWrite.All",
             "Directory.ReadWrite.All",
 
             # Files and SharePoint
@@ -84,6 +89,8 @@ class PyzureServer(SessionedServer):
             session_model=self.session_model,
             authentication_model=self.authentication_model, #type: ignore
             user_model=self.user_model,
+            user_whitelist=self.user_whitelist,
+            tenant_whitelist=self.tenant_whitelist,
             verbose=self.verbose,
         )
 
@@ -91,7 +98,7 @@ class PyzureServer(SessionedServer):
     def authentication_model(self):
         inst = MicrosoftOAuth(
             self,
-            tenant_id=self.azure_cli.tenant_id,
+            tenant_id="common",
             client_id=self.azure_cli.app_registration.client_id,
             scopes=self.scopes_str
         )
