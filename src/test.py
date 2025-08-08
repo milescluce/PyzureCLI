@@ -1,9 +1,10 @@
 import time
 
-from src.pyzurecli import PyzureServer
+from src.pyzurecli import AzureCLI
 
 if __name__ == "__main__":
-    p = PyzureServer(tenant_whitelist=["e58f9482-1a00-4559-b3b7-42cd6038c43e"]
-    )
-    p.thread.start()
-    time.sleep(100)
+    az = AzureCLI()
+    user = az.user
+    sp = az.service_principal
+    ap = az.app_registration
+    graph = az.graph_api

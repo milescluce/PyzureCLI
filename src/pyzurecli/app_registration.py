@@ -40,7 +40,7 @@ class AzureCLIAppRegistration:
         user_image = self.azure_cli.user.image
         app_name = f"{self.cwd.name.title()}-MultiTenant"
 
-        if hasattr(self, "redirect_uri"):
+        if getattr(self, "redirect_uri", None):
             log.debug(f"{self}: Registering app with redirect uri: {self.redirect_uri}")
             result = user_image.run(
                 (f"az ad app create "

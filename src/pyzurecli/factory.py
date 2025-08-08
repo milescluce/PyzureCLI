@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from loguru import logger as log
 from singleton_decorator import singleton
 from toomanyports import PortManager
-from toomanysessions import GraphAPI
+from .graph_api import GraphAPI
 
 
 @dataclass
@@ -30,13 +30,13 @@ class AzureCLI:
         self.cwd = cwd
         if redirect_uri: log.debug(f"{self}: Registered redirect_uri {redirect_uri}.")
         if not redirect_uri: log.warning(
-            f"{self}: Without a specified Redirect URI, your Azure App won't be able to communicate with effectively."
+            f"{self}: Without a specified Redirect URI, your Azure App won't be able to distribute auth tokens!."
             f" Ignore if you are just using AzureCLI programmatically without user interaction.")
         self.redirect_uri = redirect_uri
-        _ = self.user
-        _ = self.service_principal
-        _ = self.app_registration
-        _ = self.graph_api
+        # _ = self.user
+        # _ = self.service_principal
+        # _ = self.app_registration
+        # _ = self.graph_api
         log.success(f"{self}: Successfully initialized!")
 
     def __repr__(self):

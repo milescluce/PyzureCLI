@@ -9,7 +9,7 @@ from starlette.responses import Response, RedirectResponse, JSONResponse
 from toomanyports import PortManager
 from toomanysessions import SessionedServer, Session, User, Sessions, Users, MicrosoftOAuth, GraphAPI
 
-from .factory import AzureCLI
+from src.pyzurecli.factory import AzureCLI
 
 DEBUG = True
 
