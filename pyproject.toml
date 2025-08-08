@@ -1,6 +1,6 @@
 [project]
 name = "pyzurecli"
-version = "0.7.402"
+version = "0.7.403"
 description = "Azure CLI automation via Docker"
 authors = [
     {name = "Miles Copeland Luce"}
@@ -8,12 +8,9 @@ authors = [
 readme = "README.md"
 requires-python =  ">=3.13,<4.0"
 dependencies = [
-    "singleton-decorator (>=1.0.0,<2.0.0)",
-    "toomanythreads (>=0.2.3,<0.3.0)",
     "dockwershell (>=0.6,<0.7)",
     "loguru (>=0.7.3,<0.8.0)",
     "python-multipart (>=0.0.20,<0.0.21)",
-    "toomanyports (>=0.1.1,<0.2.0)",
     "httpx (>=0.28.1,<0.29.0)",
     "toomanyconfigs (>=0.2.82,<0.3.0)",
 ]

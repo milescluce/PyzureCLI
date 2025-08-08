@@ -5,9 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from loguru import logger as log
-from singleton_decorator import singleton
-from toomanyconfigs import CWD
-from toomanyports import PortManager
+
 from .graph_api import GraphAPI
 
 
@@ -21,12 +19,11 @@ class GraphToken:
     tokenType: str
 
 
-@singleton
 class AzureCLI:
     def __init__(
             self,
             cwd: Path = Path.cwd(),
-            redirect_uri = None
+            redirect_uri=None
     ):
         self.cwd = cwd
         if redirect_uri: log.debug(f"{self}: Registered redirect_uri {redirect_uri}.")
@@ -34,6 +31,7 @@ class AzureCLI:
             f"{self}: Without a specified Redirect URI, your Azure App won't be able to distribute auth tokens!."
             f" Ignore if you are just using AzureCLI programmatically without user interaction.")
         self.redirect_uri = redirect_uri
+        # turned off auto loading
         # _ = self.user
         # _ = self.service_principal
         # _ = self.app_registration
