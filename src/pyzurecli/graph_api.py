@@ -4,7 +4,7 @@ from typing import Any
 import httpx
 from loguru import logger as log
 
-from src.pyzurecli.mail import Email
+from .mail import Email
 
 
 @dataclass
@@ -87,8 +87,6 @@ class GraphAPI:
         inst = Organization(**info)
         log.debug(f"{self}: Got user's organizational info:\n  - org={inst}")
         return inst
-
-    from loguru import logger as log
 
     @property
     def messages(self):
