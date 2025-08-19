@@ -128,55 +128,51 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="header">Email View</h1>
-
-        <div class="email-card {% if not isRead %}unread{% endif %} {% if isDraft %}draft{% endif %}" onclick="window.open('{{ webLink }}', '_blank')">
-            <div class="email-header">
-                <div class="sender-info">
-                    <div class="sender-name">{{ sender.emailAddress.name }}</div>
-                    <div class="sender-email">{{ sender.emailAddress.address }}</div>
+    <div class="email-card {% if not isRead %}unread{% endif %} {% if isDraft %}draft{% endif %}" onclick="window.open('{{ webLink }}', '_blank')">
+        <div class="email-header">
+            <div class="sender-info">
+                <div class="sender-name">{{ sender.emailAddress.name }}</div>
+                <div class="sender-email">{{ sender.emailAddress.address }}</div>
+            </div>
+            <div class="email-meta">
+                <div class="status-indicators">
+                    {% if not isRead %}
+                    <div class="status-dot unread-dot" title="Unread"></div>
+                    {% endif %}
+                    {% if hasAttachments %}
+                    <div class="status-dot attachment-dot" title="Has attachments"></div>
+                    {% endif %}
+                    {% if importance == 'high' %}
+                    <div class="status-dot important-dot" title="High importance"></div>
+                    {% endif %}
+                    {% if isDraft %}
+                    <div class="status-dot draft-dot" title="Draft"></div>
+                    {% endif %}
                 </div>
-                <div class="email-meta">
-                    <div class="status-indicators">
-                        {% if not isRead %}
-                        <div class="status-dot unread-dot" title="Unread"></div>
-                        {% endif %}
-                        {% if hasAttachments %}
-                        <div class="status-dot attachment-dot" title="Has attachments"></div>
-                        {% endif %}
-                        {% if importance == 'high' %}
-                        <div class="status-dot important-dot" title="High importance"></div>
-                        {% endif %}
-                        {% if isDraft %}
-                        <div class="status-dot draft-dot" title="Draft"></div>
-                        {% endif %}
-                    </div>
-                    <div class="email-date">{{ receivedDateTime[:16] }}</div>
-                </div>
+                <div class="email-date">{{ receivedDateTime[:16] }}</div>
             </div>
-            <div class="email-subject">{{ subject }}</div>
-            <div class="email-preview">
-                {% if body.contentType == 'html' %}
-                    {{ body.content | safe }}
-                {% else %}
-                    {{ body.content }}
-                {% endif %}
-            </div>
-
-            {% if toRecipients or ccRecipients %}
-            <div class="recipients">
-                {% if toRecipients %}
-                To: {% for recipient in toRecipients %}{{ recipient.emailAddress.name }}{% if not loop.last %}, {% endif %}{% endfor %}
-                {% endif %}
-                {% if ccRecipients %}
-                {% if toRecipients %} | {% endif %}CC: {% for recipient in ccRecipients %}{{ recipient.emailAddress.name }}{% if not loop.last %}, {% endif %}{% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <div class="conversation-id">{{ conversationId }}</div>
         </div>
+        <div class="email-subject">{{ subject }}</div>
+        <div class="email-preview">
+            {% if body.contentType == 'html' %}
+                {{ body.content | safe }}
+            {% else %}
+                {{ body.content }}
+            {% endif %}
+        </div>
+
+        {% if toRecipients or ccRecipients %}
+        <div class="recipients">
+            {% if toRecipients %}
+            To: {% for recipient in toRecipients %}{{ recipient.emailAddress.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+            {% endif %}
+            {% if ccRecipients %}
+            {% if toRecipients %} | {% endif %}CC: {% for recipient in ccRecipients %}{{ recipient.emailAddress.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="conversation-id">{{ conversationId }}</div>
     </div>
 </body>
 </html>

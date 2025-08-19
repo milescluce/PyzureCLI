@@ -91,9 +91,9 @@ class GraphAPI:
     @property
     def messages(self):
         """Get all messages and return as Email objects"""
-        return self.message_query()
+        return self._get_messages()
 
-    def message_query(self, filter_query=None, select_fields=None, order_by=None, top=None):
+    def _get_messages(self, filter_query=None, select_fields=None, order_by=None, top=None):
         """
         Base method to get messages with optional filtering
 
@@ -129,7 +129,7 @@ class GraphAPI:
         email_objects = []
         for message_data in info['value']:
             try:
-                email = Email.from_graph_response(message_data, current_user_email)
+                email = Email(**message_data)
                 email_objects.append(email)
             except Exception as e:
                 log.error(f"{self}: Error creating Email object: {e}")
@@ -141,44 +141,107 @@ class GraphAPI:
     def get_messages_from_sender(self, sender_email):
         """Get messages from a specific sender"""
         filter_query = f"from/emailAddress/address eq '{sender_email}'"
-        return self.message_query(filter_query=filter_query)
+        return self._get_messages(filter_query=filter_query)
 
     def get_messages_to_recipient(self, recipient_email):
         """Get messages sent to a specific recipient"""
-        filter_query = f"recipients/any(r: r/emailAddress/address eq '{recipient_email}')"
-        return self.message_query(filter_query=filter_query)
+        filter_query = f"toRecipients/any(r: r/emailAddress/address eq '{recipient_email}')"
+        return self._get_messages(filter_query=filter_query)
 
     def get_conversation_with(self, target_email):
         """Get all messages in conversation with a specific email address"""
-        filter_query = f"(from/emailAddress/address eq '{target_email}') or (recipients/any(r: r/emailAddress/address eq '{target_email}'))"
-        return self.message_query(filter_query=filter_query, order_by="sentDateTime desc")
+        filter_query = f"(from/emailAddress/address eq '{target_email}') or (toRecipients/any(r: r/emailAddress/address eq '{target_email}')) or (ccRecipients/any(r: r/emailAddress/address eq '{target_email}'))"
+        return self._get_messages(filter_query=filter_query, order_by="sentDateTime desc")
+
+    def get_all_messages_with(self, email_address):
+        """Get all messages either sent to or received from a specific email address"""
+        # Try getting messages from sender first
+        from_messages = self.get_messages_from_sender(email_address)
+        # Then get messages to recipient
+        to_messages = self.get_messages_to_recipient(email_address)
+
+        # Combine and deduplicate based on message ID
+        all_messages = from_messages + to_messages
+        seen_ids = set()
+        unique_messages = []
+
+        for msg in all_messages:
+            if msg.id not in seen_ids:
+                seen_ids.add(msg.id)
+                unique_messages.append(msg)
+
+        # Sort by sentDateTime descending
+        unique_messages.sort(key=lambda msg: msg.sentDateTime, reverse=True)
+        return unique_messages
+
+    def get_conversations_with(self, target_email):
+        """Get all conversations with a specific email address, grouped by conversationId"""
+        messages = self.get_conversation_with(target_email)
+
+        # Group messages by conversationId
+        conversations = {}
+        for message in messages:
+            conv_id = message.conversationId
+            if conv_id not in conversations:
+                conversations[conv_id] = []
+            conversations[conv_id].append(message)
+
+        # Sort messages within each conversation by sentDateTime
+        for conv_id in conversations:
+            conversations[conv_id].sort(key=lambda msg: msg.sentDateTime)
+
+        log.info(f"{self}: Found {len(conversations)} conversations with {target_email}")
+        return conversations
+
+    def get_latest_conversation_with(self, target_email):
+        """Get the most recent conversation with a specific email address"""
+        conversations = self.get_conversations_with(target_email)
+
+        if not conversations:
+            return []
+
+        # Find the conversation with the most recent message
+        latest_conv_id = None
+        latest_timestamp = None
+
+        for conv_id, messages in conversations.items():
+            # Get the latest message in this conversation
+            latest_msg = max(messages, key=lambda msg: msg.sentDateTime)
+            if latest_timestamp is None or latest_msg.sentDateTime > latest_timestamp:
+                latest_timestamp = latest_msg.sentDateTime
+                latest_conv_id = conv_id
+
+        return conversations[latest_conv_id]
 
     def get_unread_messages(self):
         """Get all unread messages"""
         filter_query = "isRead eq false"
-        return self.message_query(filter_query=filter_query)
+        return self._get_messages(filter_query=filter_query)
 
     def get_messages_with_attachments(self):
         """Get messages that have attachments"""
         filter_query = "hasAttachments eq true"
-        return self.message_query(filter_query=filter_query)
+        return self._get_messages(filter_query=filter_query)
 
     def get_messages_by_subject(self, subject_keyword):
         """Get messages containing keyword in subject"""
         filter_query = f"contains(subject, '{subject_keyword}')"
-        return self.message_query(filter_query=filter_query)
+        return self._get_messages(filter_query=filter_query)
 
     def get_messages_by_importance(self, importance_level="high"):
         """Get messages by importance level (low, normal, high)"""
         filter_query = f"importance eq '{importance_level}'"
-        return self.message_query(filter_query=filter_query)
+        return self._get_messages(filter_query=filter_query)
 
     def get_recent_messages(self, days=7):
         """Get messages from the last N days"""
         from datetime import datetime, timedelta
         cutoff_date = (datetime.now() - timedelta(days=days)).isoformat() + "Z"
         filter_query = f"receivedDateTime ge {cutoff_date}"
-        return self.message_query(filter_query=filter_query, order_by="receivedDateTime desc")
+        return self._get_messages(
+            filter_query=filter_query,
+            order_by="receivedDateTime desc"
+        )
 
     def search_messages(self, search_term):
         """Search messages by content (requires search endpoint)"""
@@ -189,7 +252,7 @@ class GraphAPI:
 
         log.debug(f"Searching messages with term: {search_term}")
 
-        info = self.request("get", "me/messages", query_parameters=search_params)
+        info = self.request("get", "me/messages", params=search_params)
 
         if not info or 'value' not in info:
             log.warning(f"{self}: No search results found")
@@ -200,7 +263,7 @@ class GraphAPI:
 
         for message_data in info['value']:
             try:
-                email = Email.from_graph_response(message_data, current_user_email)
+                email = Email(**message_data)
                 email_objects.append(email)
             except Exception as e:
                 log.error(f"{self}: Error creating Email object from search: {e}")
@@ -209,22 +272,12 @@ class GraphAPI:
         log.info(f"{self}: Found {len(email_objects)} messages matching search term")
         return email_objects
 
-    def request(self, method, resource, query_parameters=None, headers=None, json_body=None):
+    def request(self, method, resource, params: dict = None, headers=None, json_body=None):
         url = f"{self.base_url}/{resource}"
 
         request_headers = self.headers.copy()
         if headers:
             request_headers.update(headers)
-
-        params = {}
-        if query_parameters:
-            if isinstance(query_parameters, str):
-                for param in query_parameters.split("&"):
-                    if "=" in param:
-                        key, value = param.split("=", 1)
-                        params[key] = value
-            else:
-                params = query_parameters
 
         log.info(f"{self}: Sending {method.upper()} request to: {url}")
 
