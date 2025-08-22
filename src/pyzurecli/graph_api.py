@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from typing import Any
-
 import httpx
 from loguru import logger as log
 
@@ -262,7 +259,7 @@ class GraphAPI:
         log.debug(f"Sending email to: {to_recipients}")
 
         try:
-            response = self.request("POST", "me/sendMail", data=email_data)
+            response = self.request("POST", "me/sendMail", json_body=email_data)
             log.info(f"Email sent successfully to: {to_recipients}")
             return response
         except Exception as e:
