@@ -4,54 +4,7 @@ from typing import Any
 import httpx
 from loguru import logger as log
 
-from .mail import Email
-
-
-@dataclass
-class Me:
-    businessPhones: Any
-    displayName: str
-    givenName: str
-    jobTitle: str
-    mail: str
-    mobilePhone: Any
-    officeLocation: Any
-    preferredLanguage: Any
-    surname: str
-    userPrincipalName: Any
-    id: str
-
-
-@dataclass
-class Organization:
-    id: str
-    deletedDateTime: Any
-    businessPhones: Any
-    city: Any
-    country: Any
-    countryLetterCode: Any
-    createdDateTime: Any
-    defaultUsageLocation: Any
-    displayName: str
-    isMultipleDataLocationsForServicesEnabled: Any
-    marketingNotificationEmails: Any
-    onPremisesLastSyncDateTime: Any
-    onPremisesSyncEnabled: Any
-    partnerTenantType: Any
-    postalCode: Any
-    preferredLanguage: Any
-    securityComplianceNotificationMails: Any
-    securityComplianceNotificationPhones: Any
-    state: Any
-    street: Any
-    technicalNotificationMails: Any
-    tenantType: str
-    directorySizeQuota: Any
-    privacyProfile: Any
-    assignedPlans: Any
-    onPremisesSyncStatus: Any
-    provisionedPlans: Any
-    verifiedDomains: Any
+from .models import Email, Me, Organization, Person
 
 
 class GraphAPI:
@@ -65,7 +18,7 @@ class GraphAPI:
         }
 
     def __repr__(self):
-        return f"[GraphAPI.{self.token[:4]}"
+        return f"[GraphAPI.{self.token[:4]}]"
 
     @property
     def me(self):
@@ -111,12 +64,15 @@ class GraphAPI:
             params["$select"] = select_fields
         if order_by:
             params["$orderby"] = order_by
-        if top:
-            params["$top"] = top
+        if not top:
+            params["$top"] = 1000
 
         log.debug(f"Getting messages with params: {params}")
 
-        info = self.request("get", "me/messages", params=params)
+        try:
+            info = self.request("get", "me/messages", params=params)
+        except Exception as e:
+            raise
 
         if not info or 'value' not in info:
             log.warning(f"{self}: No messages found or invalid response")
@@ -133,7 +89,7 @@ class GraphAPI:
                 email_objects.append(email)
             except Exception as e:
                 log.error(f"{self}: Error creating Email object: {e}")
-                continue
+                raise
 
         log.info(f"{self}: Converted {len(email_objects)} messages to Email objects")
         return email_objects
@@ -145,8 +101,8 @@ class GraphAPI:
 
     def get_messages_to_recipient(self, recipient_email):
         """Get messages sent to a specific recipient"""
-        filter_query = f"toRecipients/any(r: r/emailAddress/address eq '{recipient_email}')"
-        return self._get_messages(filter_query=filter_query)
+        # filter_query = f"toRecipients/any(r:(r/emailAddress/address eq '{recipient_email}'))"
+        return self.search_messages(f"'to: {recipient_email}'")
 
     def get_conversation_with(self, target_email):
         """Get all messages in conversation with a specific email address"""
@@ -272,6 +228,80 @@ class GraphAPI:
         log.info(f"{self}: Found {len(email_objects)} messages matching search term")
         return email_objects
 
+    def send_email(self, to_recipients, subject, body, cc_recipients=None, bcc_recipients=None, attachments=None):
+        """Send an email using Microsoft Graph"""
+
+        def format_recipients(recipients):
+            """Convert email addresses to Graph API format"""
+            if isinstance(recipients, str):
+                recipients = [recipients]
+            return [{"emailAddress": {"address": email}} for email in recipients]
+
+        email_data = {
+            "message": {
+                "subject": subject,
+                "body": {
+                    "contentType": "HTML",  # or "Text"
+                    "content": body
+                },
+                "toRecipients": format_recipients(to_recipients)
+            }
+        }
+
+        # Add optional recipients
+        if cc_recipients:
+            email_data["message"]["ccRecipients"] = format_recipients(cc_recipients)
+
+        if bcc_recipients:
+            email_data["message"]["bccRecipients"] = format_recipients(bcc_recipients)
+
+        # Add attachments if provided
+        if attachments:
+            email_data["message"]["attachments"] = attachments
+
+        log.debug(f"Sending email to: {to_recipients}")
+
+        try:
+            response = self.request("POST", "me/sendMail", data=email_data)
+            log.info(f"Email sent successfully to: {to_recipients}")
+            return response
+        except Exception as e:
+            log.error(f"Failed to send email: {e}")
+            raise
+
+    def get_people(self, amt: int = 50):
+        """Simple request to get people from Graph API"""
+        log.debug(f"Getting {amt} people from People API")
+
+        try:
+            info = self.request(
+                method="get",
+                resource="me/people",
+                params={
+                    "$top": amt
+                }
+            )
+        except Exception as e:
+            log.error(f"{self}: Failed to get people: {e}")
+            raise
+
+        if not info or 'value' not in info:
+            log.warning(f"{self}: No people found")
+            return []
+
+        # Convert to Person objects
+        people = []
+        for person_data in info['value']:
+            try:
+                person = Person(**person_data)
+                people.append(person)
+            except Exception as e:
+                log.error(f"{self}: Error creating Person object: {e}")
+                continue
+
+        log.info(f"{self}: Found {len(people)} people")
+        return people
+
     def request(self, method, resource, params: dict = None, headers=None, json_body=None):
         url = f"{self.base_url}/{resource}"
 
@@ -293,10 +323,10 @@ class GraphAPI:
 
                 if not response.is_success:
                     log.error(f"{self}: Error {response.status_code}: {response.text}")
-                    return None
+                    raise ConnectionRefusedError(f"Error {response.status_code}: {response.text}")
 
                 return response.json()
 
         except Exception as e:
             log.exception(f"{self}: Request failed: {e}")
-            return None
+            raise
