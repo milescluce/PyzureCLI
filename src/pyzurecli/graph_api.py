@@ -1,11 +1,13 @@
 import httpx
 from loguru import logger as log
+from pickleclass import PickleClass
 
 from .models import Email, Me, Organization, Person
 
 
-class GraphAPI:
-    def __init__(self, token: str, version: str = "v1.0"):
+class GraphAPI(PickleClass):
+    def __init__(self, token: str, version: str = "v1.0", debug: bool = False):
+        super().__init__()
         self.token: str = token
         self.version = version.strip("/")
         self.base_url = f"https://graph.microsoft.com/{self.version}"
@@ -13,6 +15,7 @@ class GraphAPI:
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json"
         }
+        if debug: self.to_pickle("test_api")
 
     def __repr__(self):
         return f"[GraphAPI.{self.token[:4]}]"
