@@ -170,8 +170,7 @@ class Person(HTMLDict):
         return f"Person(name='{self.full_name}', email='{self.primary_email}', type='{self.person_class}')"
 
 
-@dataclass
-class Me:
+class Me(HTMLDict):
     businessPhones: Any
     displayName: str
     givenName: str
@@ -184,9 +183,7 @@ class Me:
     userPrincipalName: Any
     id: str
 
-
-@dataclass
-class Organization:
+class Organization(HTMLDict):
     id: str
     deletedDateTime: Any
     businessPhones: Any

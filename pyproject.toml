@@ -1,6 +1,6 @@
 [project]
 name = "pyzurecli"
-version = "0.7.412"
+version = "0.7.413"
 description = "Azure CLI automation via Docker"
 authors = [
     {name = "Miles Copeland Luce"}
@@ -14,6 +14,7 @@ dependencies = [
     "httpx (>=0.28.1,<0.29.0)",
     "toomanyconfigs (>=0.2.866,<0.3.0)",
     "htmldict (>=0.1.1,<0.2.0)",
+    "pickleclass (>=0.1.0,<0.2.0)",
 ]
 
 [tool.poetry]
