@@ -1,4 +1,7 @@
+from functools import cached_property
+
 import httpx
+import pandas as pd
 from loguru import logger as log
 from toomanyconfigs.simple_api import SimpleAPI, SimpleAPIResponse
 
@@ -17,6 +20,9 @@ class GraphAPI(SimpleAPI):
             }
         )
         if debug: self.to_pickle("test_graph_api")
+        self.messages_to_person = self.list_messages_to_person
+        self.messages_from_person = self.list_messages_from_person
+        self.messages_with_person = self.list_messages_with_person
 
     def __repr__(self):
         return f"[GraphAPI.{self.token[:8]}]"
@@ -69,7 +75,7 @@ class GraphAPI(SimpleAPI):
         val = response.body.get("value")
         return val
 
-    def messages_to_person(self, email) -> list:
+    def list_messages_to_person(self, email) -> list:
         log.debug(f"{self}: Getting messages with {email}")
         data = self.sent_messages
         msgs = []
@@ -86,7 +92,7 @@ class GraphAPI(SimpleAPI):
         log.debug(f"{self}: Found {num} messages sent to {email}")
         return msgs
 
-    def messages_from_person(self, email) -> list:
+    def list_messages_from_person(self, email) -> list:
         log.debug(f"{self}: Getting messages from {email}")
         data = self.received_messages
         msgs = []
@@ -100,7 +106,7 @@ class GraphAPI(SimpleAPI):
         log.debug(f"{self}: Found {num} messages from {email}")
         return msgs
 
-    def messages_with_person(self, email) -> dict:
+    def list_messages_with_person(self, email) -> dict:
         log.debug(f"{self}: Getting messages with {email}")
         msgs_from = self.messages_from_person(email)
         if not msgs_from: msgs_from = []
@@ -114,6 +120,68 @@ class GraphAPI(SimpleAPI):
         num = len(msgs_from) + len(msgs_to)
         log.debug(f"{self}: Found {num} messages with {email}")
         return total
+
+    def dataframe_messages_to_person(self, email) -> pd.DataFrame:
+        log.debug(f"{self}: Getting messages to {email} as dataframe")
+        msgs = self.list_messages_to_person(email)
+
+        records = []
+        for msg in msgs:
+            records.append({
+                'id': msg.get('id', ''),
+                'subject': msg.get('subject', ''),
+                'sender_name': msg.get('sender', {}).get('emailAddress', {}).get('name', ''),
+                'sender_email': msg.get('sender', {}).get('emailAddress', {}).get('address', ''),
+                'recipient_emails': [r.get('emailAddress', {}).get('address', '') for r in msg.get('toRecipients', [])],
+                'date': msg.get('sentDateTime', '')[:10] if msg.get('sentDateTime') else '',
+                'time': msg.get('sentDateTime', '')[11:].replace("Z", "") if msg.get('sentDateTime') else ''
+            })
+
+        df = pd.DataFrame(records)
+        log.debug(f"{self}: Created dataframe with {len(df)} records for {email}")
+        return df
+
+    def dataframe_messages_from_person(self, email) -> pd.DataFrame:
+        log.debug(f"{self}: Getting messages from {email} as dataframe")
+        msgs = self.list_messages_from_person(email)
+
+        records = []
+        for msg in msgs:
+            records.append({
+                'id': msg.get('id', ''),
+                'subject': msg.get('subject', ''),
+                'sender_name': msg.get('sender', {}).get('emailAddress', {}).get('name', ''),
+                'sender_email': msg.get('sender', {}).get('emailAddress', {}).get('address', ''),
+                'recipient_emails': [r.get('emailAddress', {}).get('address', '') for r in msg.get('toRecipients', [])],
+                'date': msg.get('sentDateTime', '')[:10] if msg.get('sentDateTime') else '',
+                'time': msg.get('sentDateTime', '')[11:].replace("Z", "") if msg.get('sentDateTime') else ''
+            })
+
+        df = pd.DataFrame(records)
+        log.debug(f"{self}: Created dataframe with {len(df)} records for {email}")
+        return df
+
+    def dataframe_messages_with_person(self, email) -> pd.DataFrame:
+        log.debug(f"{self}: Getting messages with {email} as dataframe")
+
+        # Get messages from both directions
+        msgs_to = self.dataframe_messages_to_person(email)
+        msgs_from = self.dataframe_messages_from_person(email)
+
+        # Add direction column to distinguish message types
+        msgs_to['direction'] = 'sent'
+        msgs_from['direction'] = 'received'
+
+        # Combine DataFrames
+        combined_df = pd.concat([msgs_to, msgs_from], ignore_index=True)
+
+        # Sort by date and time for chronological order
+        combined_df['datetime'] = combined_df['date'] + ' ' + combined_df['time']
+        combined_df = combined_df.sort_values('datetime', ascending=False)
+        combined_df = combined_df.drop('datetime', axis=1)  # Remove temp column
+
+        log.debug(f"{self}: Created combined dataframe with {len(combined_df)} records for {email}")
+        return combined_df
 
     def get_filtered_people(self, amt: int = 1000, filters: list = None):
         """Simple request to get people from Graph API"""
