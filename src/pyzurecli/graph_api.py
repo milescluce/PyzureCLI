@@ -1,6 +1,6 @@
 import httpx
 from loguru import logger as log
-from toomanyconfigs.simple_api import SimpleAPI
+from toomanyconfigs.simple_api import SimpleAPI, SimpleAPIResponse
 
 from .models import Email, Me, Organization, Person
 
@@ -21,47 +21,51 @@ class GraphAPI(SimpleAPI):
     def __repr__(self):
         return f"[GraphAPI.{self.token[:8]}]"
 
+    def safe_request(self, method: str, path: str, **kwargs) -> SimpleAPIResponse:
+        try:
+            response = self.request(method, path, **kwargs)
+            if error := response.body.get("error"):
+                log.error(f"{self}: Error requesting {self.base_url}{path}!")
+                code = error["code"]
+                msg = error["message"]
+                msg = f"{code}: {msg}"
+                if code == 400: raise ConnectionRefusedError(msg) #Can't process the request because it's malformed or incorrect.
+                elif code == 401: raise PermissionError(msg) #Required authentication information is either missing or not valid for the resource.
+                elif code == "InvalidAuthenticationToken": raise PermissionError(msg)
+                elif code == 403: raise PermissionError(msg) #Access is denied to the requested resource. The user does not have enough permission or does not have a required license.
+                else: raise ConnectionError(msg)
+            return response
+        except Exception:
+            raise
+
     @property
     def me(self):
-        response = self.request(
-            method="get",
-            path="me"
-        )
+        response = self.safe_request(method="get", path="me")
         return Me(**response.body)
 
     @property
     def organization(self):
         """Get user's organization/tenant info from Graph API"""
-        response = self.request(
-            "get",
-            "organization"
-        )
+        response = self.safe_request(method="get", path="organization")
         val = response.body.get("value")[0]
         return Organization(**val)
 
     @property
     def received_messages(self):
-        response = self.request(
-            method="get",
-            path="/me/messages?$filter=isDraft eq false and parentFolderId ne 'SentItems'&$select=sender,subject,toRecipients,receivedDateTime&$top=100"
-        )
+        response = self.safe_request(method="get",
+                                     path="/me/messages?$filter=isDraft eq false and parentFolderId ne 'SentItems'&$select=sender,subject,toRecipients,receivedDateTime&$top=100")
         val = response.body.get("value")
         return val
 
     @property
     def sent_messages(self):
-        response = self.request(
-            method="get",
-            path="/me/mailFolders/SentItems/messages?$select=sender,subject,toRecipients,sentDateTime&$top=100"
-        )
+        response = self.safe_request(method="get",
+                                     path="/me/mailFolders/SentItems/messages?$select=sender,subject,toRecipients,sentDateTime&$top=100")
         val = response.body.get("value")
         return val
 
     def message(self, id: str):
-        response = self.request(
-            method="get",
-            path = f"/me/messages/{id}"
-        )
+        response = self.safe_request(method="get", path=f"/me/messages/{id}")
         val = response.body.get("value")
         return val
 
@@ -99,7 +103,9 @@ class GraphAPI(SimpleAPI):
     def messages_with_person(self, email):
         log.debug(f"{self}: Getting messages with {email}")
         msgs_from = self.messages_from_person(email)
+        if not msgs_from: msgs_from = {}
         msgs_to = self.messages_to_person(email)
+        if not msgs_to: msgs_to = {}
         total = msgs_from + msgs_to
         num = len(total)
         log.debug(f"{self}: Found {num} messages with {email}")
@@ -115,10 +121,8 @@ class GraphAPI(SimpleAPI):
             if not isinstance(filters, list): raise TypeError(f"'Filters' must be a list, got {type(filters)} instead")
             default_filter = default_filter + filters
         log.debug(f"{self}: Filtering out '{default_filter}'")
-        response = self.request(
-            method="get",
-            path=f"me/people?$top={amt}&$select=id,displayName,userPrincipalName,scoredEmailAddresses",
-        )
+        response = self.safe_request(method="get",
+                                     path=f"me/people?$top={amt}&$select=id,displayName,userPrincipalName,scoredEmailAddresses")
         val = response.body.get("value")
         log.debug(f"{self}: Collected {len(val)} people from API")
         filtered_people = []
