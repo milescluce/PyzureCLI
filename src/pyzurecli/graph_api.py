@@ -64,12 +64,12 @@ class GraphAPI(SimpleAPI):
         val = response.body.get("value")
         return val
 
-    def message(self, id: str):
+    def message(self, id: str) -> dict:
         response = self.safe_request(method="get", path=f"/me/messages/{id}")
         val = response.body.get("value")
         return val
 
-    def messages_to_person(self, email):
+    def messages_to_person(self, email) -> list:
         log.debug(f"{self}: Getting messages with {email}")
         data = self.sent_messages
         msgs = []
@@ -86,7 +86,7 @@ class GraphAPI(SimpleAPI):
         log.debug(f"{self}: Found {num} messages sent to {email}")
         return msgs
 
-    def messages_from_person(self, email):
+    def messages_from_person(self, email) -> list:
         log.debug(f"{self}: Getting messages from {email}")
         data = self.received_messages
         msgs = []
@@ -100,14 +100,18 @@ class GraphAPI(SimpleAPI):
         log.debug(f"{self}: Found {num} messages from {email}")
         return msgs
 
-    def messages_with_person(self, email):
+    def messages_with_person(self, email) -> dict:
         log.debug(f"{self}: Getting messages with {email}")
         msgs_from = self.messages_from_person(email)
-        if not msgs_from: msgs_from = {}
+        if not msgs_from: msgs_from = []
         msgs_to = self.messages_to_person(email)
-        if not msgs_to: msgs_to = {}
-        total = msgs_from + msgs_to
-        num = len(total)
+        if not msgs_to: msgs_to = []
+        total = {
+            "target_email": email,
+            "messages_from": msgs_from,
+            "messages_to": msgs_to
+        }
+        num = len(msgs_from) + len(msgs_to)
         log.debug(f"{self}: Found {num} messages with {email}")
         return total
 
