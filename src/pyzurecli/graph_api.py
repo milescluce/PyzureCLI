@@ -75,10 +75,10 @@ class GraphAPI(SimpleAPI):
         msgs = []
         num = 0
         for each in data:
-            print(each)
+            # print(each)
             receps: dict = each.get("toRecipients")
             for person in receps:
-                print(person)
+                # print(person)
                 target = person.get("emailAddress").get("address")
                 if target == email:
                     num = num + 1
@@ -92,7 +92,7 @@ class GraphAPI(SimpleAPI):
         msgs = []
         num = 0
         for each in data:
-            print(each)
+            # print(each)
             target = each.get("sender").get("emailAddress").get("address")
             if target == email:
                 num = num + 1
