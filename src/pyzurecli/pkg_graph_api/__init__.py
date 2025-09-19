@@ -1,0 +1,13 @@
+_DEBUG = True
+PREFIX = "GraphAPI"
+from loguru import logger as log
+from .pkg_filters import email_filters
+from .pkg_type_check_emails import type_check_emails
+
+def debug(msg: str):
+    if not isinstance(msg, str): raise TypeError(f"Msg not str, got {msg.__class__} instead")
+    if _DEBUG: log.debug(f"[{PREFIX}]: {msg}")
+
+
+from .class_graph_api import _GraphAPIInit, _GraphAPIProperties, _GraphAPIMethods, GraphAPI
+from .pkg_messages import list_sent_messages_to_person, list_received_messages_from_person, list_messages_with_person

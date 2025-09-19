@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 from loguru import logger as log
 
-from .graph_api import GraphAPI
+from .pkg_graph_api import GraphAPI
 
 
 @dataclass
