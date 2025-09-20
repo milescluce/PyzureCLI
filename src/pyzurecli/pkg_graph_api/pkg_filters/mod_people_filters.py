@@ -1,8 +1,6 @@
 from typing import Annotated
 
-from .. import _GraphAPIMethods, debug, _GraphAPIProperties
-from ..pkg_util import validate_range
-
+from .. import _GraphAPIMethods, debug, _GraphAPIProperties, validate_range
 
 def _process_default_people_filter(filter):
     if not isinstance(filter, list):
