@@ -1,6 +1,6 @@
 [project]
 name = "pyzurecli"
-version = "0.7.502"
+version = "0.7.503"
 description = "Azure CLI automation via Docker"
 authors = [
     {name = "Miles Copeland Luce"}
