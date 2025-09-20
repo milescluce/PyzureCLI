@@ -8,7 +8,7 @@ async def list_received_messages_from_person(self: _GraphAPIMethods, person: str
         method="GET",
         path=f"/me/messages?$filter=(from/emailAddress/address) eq '{person}'"
     )
-    return type_check_emails(response)
+    return type_check_emails(response.body)
 
 async def list_sent_messages_to_person(self: _GraphAPIMethods, person: str):
     if not is_valid_email_regex(person): raise TypeError("Not a valid email, got {person} instead")
@@ -16,7 +16,7 @@ async def list_sent_messages_to_person(self: _GraphAPIMethods, person: str):
         method="GET",
         path=f'https://graph.microsoft.com/v1.0/me/mailFolders/SentItems/messages?$search="to:{person}"&$top=999'
     )
-    return type_check_emails(response)
+    return type_check_emails(response.body)
 
 async def list_messages_with_person(self: _GraphAPIMethods, person: str) -> dict:
     if not is_valid_email_regex(person): raise TypeError("Not a valid email, got {person} instead")
