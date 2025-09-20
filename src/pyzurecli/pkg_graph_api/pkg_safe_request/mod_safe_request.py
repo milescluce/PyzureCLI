@@ -1,6 +1,6 @@
 from toomanyconfigs.simple_api import SimpleAPIResponse
 
-from src.pyzurecli.pkg_graph_api import _GraphAPIInit
+from .. import _GraphAPIInit
 
 
 def error_handling(response: SimpleAPIResponse):
