@@ -89,6 +89,13 @@ class _GraphAPIMethods(_GraphAPIProperties):
         from .pkg_filters import get_filtered_people
         get_filtered_people(self, filter_override, filter_append, top)
 
+    async def list_conversations_with_person(self, person: str, top: Annotated[int, validate_range(1, 999)] = 999):
+        from .pkg_messages import list_conversations_with_person
+        return await list_conversations_with_person(self, person, top)
+
+    async def get_conversation(self, conversation_id: str, get_message_content: bool = True, top: Annotated[int, validate_range(1, 999)] = 999):
+        from .pkg_messages import get_conversation
+        return await get_conversation(self, conversation_id, get_message_content, top)
 
 class GraphAPI(_GraphAPIMethods):
     def __init__(self, token: str, version: str = "v1.0", email_filters: list | None = None,
