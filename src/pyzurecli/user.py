@@ -80,9 +80,7 @@ class AzureCLIUser:
     @cached_property
     def run_args(self):
         dir_wsl = path_to_wsl(self.paths.dir)
-        log.warning(dir_wsl)
         cfg_wsl = path_to_wsl(self.paths.azure_config)
-        log.warning(cfg_wsl)
         cmd = f"-v {dir_wsl}:/app -v {cfg_wsl}:/root/.azure -e AZURE_CONFIG_DIR=/root/.azure -w /app"
         return cmd
 
