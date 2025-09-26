@@ -94,20 +94,29 @@ class AzureCLIUser:
     @cached_property
     def azure_profile(self):
         image: DockerImage = self.image
-        while True:
+        try:
+            log.debug(f"{self}: Attempting to load account from {self.paths.azure_profile}...")
+            with open(self.paths.azure_profile, "r", encoding="utf-8-sig") as file:
+                data = json.load(file)
+                if data == {}: raise ValueError
+                log.debug(f"{self}: Found {self.paths.azure_profile}! Data:\n{data}")
+                ses = json_to_dataclass(UserSession, data)
+                return ses
+        except Exception as e:
             try:
-                log.debug(f"{self}: Attempting to load account from {self.paths.azure_profile}...")
-                with open(self.paths.azure_profile, "r", encoding="utf-8-sig") as file:
-                    data = json.load(file)
-                    if data == {}: raise ValueError
-                    log.debug(f"{self}: Found {self.paths.azure_profile}! Data:\n{data}")
-                    ses = json_to_dataclass(UserSession, data)
-                    return ses
-            except Exception as e:
                 log.error(f"{self}: Error while parsing UserSession...\n{e}")
                 log.warning(f"{self}: No account session found... Are you logged in?")
                 image.run(cmd="az login --use-device-code", headless=False)
                 image.run(cmd="az account show")
+                ses = json_to_dataclass(UserSession, data)
+                return ses
+            except Exception as e2:
+                log.error(f"{self}: Error while loading account from device code: {e2}")
+                log.info(f"{self}: Attempting to login again...")
+                image.run(cmd="az login", headless=False)
+                ses = json_to_dataclass(UserSession, data)
+                return ses
+
 
 # class GraphAPI:
 #     @cached_property
