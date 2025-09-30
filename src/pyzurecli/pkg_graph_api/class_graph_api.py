@@ -6,7 +6,6 @@ from toomanyconfigs.simple_api import SimpleAPI
 from . import _DEBUG, validate_range
 from ..models import Me, Organization
 
-
 class _GraphAPIInit(SimpleAPI):
     def __init__(self, token: str, version: str = "v1.0", email_filters: list | None = None,
                  people_filters: list | None = None, _debug: bool = _DEBUG):
@@ -79,7 +78,7 @@ class _GraphAPIMethods(_GraphAPIProperties):
 
     async def list_sent_messages_to_person(self, person: str, top: Annotated[int, validate_range(1, 999)] = 999):
         from .pkg_messages import list_sent_messages_to_person
-        return await list_sent_messages_to_person(self, person)
+        return await list_sent_messages_to_person(self, person, top)
 
     async def list_messages_with_person(self, person: str, top: Annotated[int, validate_range(1, 999)] = 999) -> dict:
         from .pkg_messages import list_messages_with_person
