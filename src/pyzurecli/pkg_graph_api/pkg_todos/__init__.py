@@ -8,6 +8,8 @@ class DueDateTime(dict):
         self["dateTime"] = dateTime
         self["timeZone"] = timeZone
 
+
+# noinspection PyPep8Naming
 class ToDo:
     def __init__(self, graph: _GraphAPIMethods):
         self.graph = graph
@@ -90,7 +92,7 @@ class ToDo:
         )
         return response
 
-    def get_tasks(self, taskListId: str, filter: str = None):
+    async def get_tasks(self, taskListId: str, filter: str = None):
         path = f"/me/todo/lists/{taskListId}/tasks"
         if filter:
             path += f"?$filter={quote(filter)}"

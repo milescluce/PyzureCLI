@@ -20,7 +20,7 @@ class _GraphAPIInit(SimpleAPI):
             headers={
                 "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json",
-                "Prefer": "return=representation"
+                # "Prefer": "return=representation"
             }
         )
         if _debug: self.to_pickle("test_graph_api")
