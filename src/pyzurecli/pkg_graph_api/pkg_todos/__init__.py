@@ -1,5 +1,5 @@
 from typing import Literal, Dict, Optional
-
+from urllib.parse import quote
 from .. import _GraphAPIMethods
 
 class DueDateTime(dict):
@@ -12,12 +12,28 @@ class ToDo:
     def __init__(self, graph: _GraphAPIMethods):
         self.graph = graph
 
-    def get_lists(self):
+    def get_lists(self, filter: str = None):
+        path = "/me/todo/lists"
+        if filter:
+            path += f"?$filter={quote(filter)}"
+
         response = self.graph.safe_request(
             method="GET",
-            path="/me/todo/lists"
+            path=path
         )
         return response
+
+    def get_lists_filtered(self, displayName: str = None, startsWith: str = None, contains: str = None):
+        if displayName:
+            filter_query = f"displayName eq '{displayName}'"
+        elif startsWith:
+            filter_query = f"startswith(displayName, '{startsWith}')"
+        elif contains:
+            filter_query = f"contains(displayName, '{contains}')"
+        else:
+            return self.get_lists()
+
+        return self.get_lists(filter=filter_query)
 
     def post_list(self, displayName: str):
         data = {
@@ -74,9 +90,40 @@ class ToDo:
         )
         return response
 
-    def get_tasks(self, taskListId: str):
+    def get_tasks(self, taskListId: str, filter: str = None):
+        path = f"/me/todo/lists/{taskListId}/tasks"
+        if filter:
+            path += f"?$filter={quote(filter)}"
+
         response = self.graph.safe_request(
             method="GET",
-            path=f"/me/todo/lists/{taskListId}/tasks"
+            path=path
         )
         return response
+
+    def get_tasks_filtered(self,
+       taskListId: str,
+       title: str = None,
+       titleStartsWith: str = None,
+       titleContains: str = None,
+       status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None,
+       importance: Literal["low", "normal", "high"] = None):
+        filters = []
+
+        if title:
+            filters.append(f"title eq '{title}'")
+        elif titleStartsWith:
+            filters.append(f"startswith(title, '{titleStartsWith}')")
+        elif titleContains:
+            filters.append(f"contains(title, '{titleContains}')")
+
+        if status:
+            filters.append(f"status eq '{status}'")
+        if importance:
+            filters.append(f"importance eq '{importance}'")
+
+        if not filters:
+            return self.get_tasks(taskListId)
+
+        filter_query = " and ".join(filters)
+        return self.get_tasks(taskListId, filter=filter_query)
