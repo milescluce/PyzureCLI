@@ -9,23 +9,22 @@ class DueDateTime(dict):
         self["timeZone"] = timeZone
 
 
-# noinspection PyPep8Naming
 class ToDo:
     def __init__(self, graph: _GraphAPIMethods):
         self.graph = graph
 
-    def get_lists(self, filter: str = None):
+    async def get_lists(self, filter: str = None):
         path = "/me/todo/lists"
         if filter:
             path += f"?$filter={quote(filter)}"
 
-        response = self.graph.safe_request(
+        response = await self.graph.safe_request(
             method="GET",
             path=path
         )
         return response
 
-    def get_lists_filtered(self, displayName: str = None, startsWith: str = None, contains: str = None):
+    async def get_lists_filtered(self, displayName: str = None, startsWith: str = None, contains: str = None):
         if displayName:
             filter_query = f"displayName eq '{displayName}'"
         elif startsWith:
@@ -33,29 +32,29 @@ class ToDo:
         elif contains:
             filter_query = f"contains(displayName, '{contains}')"
         else:
-            return self.get_lists()
+            return await self.get_lists()
 
-        return self.get_lists(filter=filter_query)
+        return await self.get_lists(filter=filter_query)
 
-    def post_list(self, displayName: str):
+    async def post_list(self, displayName: str):
         data = {
             "displayName": displayName
         }
-        response = self.graph.safe_request(
+        response = await self.graph.safe_request(
             method="POST",
             path="/me/todo/lists",
             json=data
         )
         return response
 
-    def delete_list(self, id: str):
-        response = self.graph.safe_request(
+    async def delete_list(self, id: str):
+        response = await self.graph.safe_request(
             method="DELETE",
             path=f"/me/todo/lists/{id}"
         )
         return response
 
-    def post_task(self, taskListId: str, title: str, body: str = None, importance: Literal["low", "normal", "high"] = None, status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None, dueDateTime: DueDateTime = None, isReminderOn: bool = False):
+    async def post_task(self, taskListId: str, title: str, body: str = None, importance: Literal["low", "normal", "high"] = None, status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None, dueDateTime: DueDateTime = None, isReminderOn: bool = False):
         data = {}
         if title: data["title"] = title
         if body: data["body"] = {"content": body, "contentType": "text"}
@@ -63,14 +62,14 @@ class ToDo:
         if status: data["status"] = status
         if dueDateTime: data["dueDateTime"] = dueDateTime
         if isReminderOn: data["isReminderOn"] = isReminderOn
-        response = self.graph.safe_request(
+        response = await self.graph.safe_request(
             method="POST",
             path=f"/me/todo/lists/{taskListId}/tasks",
             json=data
         )
         return response
 
-    def patch_task(self, taskListId: str, taskId: str, title: str = None, body: str = None, importance: Literal["low", "normal", "high"] = None, status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None, dueDateTime: DueDateTime = None, isReminderOn: bool = None):
+    async def patch_task(self, taskListId: str, taskId: str, title: str = None, body: str = None, importance: Literal["low", "normal", "high"] = None, status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None, dueDateTime: DueDateTime = None, isReminderOn: bool = None):
         data = {}
         if title: data["title"] = title
         if body: data["body"] = {"content": body, "contentType": "text"}
@@ -78,15 +77,15 @@ class ToDo:
         if status: data["status"] = status
         if dueDateTime: data["dueDateTime"] = dueDateTime
         if isReminderOn is not None: data["isReminderOn"] = isReminderOn
-        response = self.graph.safe_request(
+        response = await self.graph.safe_request(
             method="PATCH",
             path=f"/me/todo/lists/{taskListId}/tasks/{taskId}",
             json=data
         )
         return response
 
-    def delete_task(self, taskListId: str, taskId: str):
-        response = self.graph.safe_request(
+    async def delete_task(self, taskListId: str, taskId: str):
+        response = await self.graph.safe_request(
             method="DELETE",
             path=f"/me/todo/lists/{taskListId}/tasks/{taskId}"
         )
@@ -97,13 +96,13 @@ class ToDo:
         if filter:
             path += f"?$filter={quote(filter)}"
 
-        response = self.graph.safe_request(
+        response = await self.graph.safe_request(
             method="GET",
             path=path
         )
         return response
 
-    def get_tasks_filtered(self,
+    async def get_tasks_filtered(self,
        taskListId: str,
        title: str = None,
        titleStartsWith: str = None,
@@ -125,7 +124,7 @@ class ToDo:
             filters.append(f"importance eq '{importance}'")
 
         if not filters:
-            return self.get_tasks(taskListId)
+            return await self.get_tasks(taskListId)
 
         filter_query = " and ".join(filters)
-        return self.get_tasks(taskListId, filter=filter_query)
+        return await self.get_tasks(taskListId, filter=filter_query)

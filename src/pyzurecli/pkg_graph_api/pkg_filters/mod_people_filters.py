@@ -19,10 +19,10 @@ def _process_people_filter(default_filter: list = [], filter_override: list | No
         if len(filter_append) > 0: filter = filter + filter_append
     return filter
 
-def get_filtered_people(self: _GraphAPIProperties, filter_override: list = None, filter_append: list = None, top: Annotated[int, validate_range(1, 999)] = 999):
+async def get_filtered_people(self: _GraphAPIProperties, filter_override: list = None, filter_append: list = None, top: Annotated[int, validate_range(1, 999)] = 999):
     # me = self.me
     # my_email = str(me.userPrincipalName).rsplit("@")[1]
-    response = self.safe_request(
+    response = await self.safe_request(
         method="GET",
         path=f"me/people?$select=id,displayName,userPrincipalName,scoredEmailAddresses$top={top}"
     )

@@ -28,12 +28,13 @@ class _GraphAPIInit(SimpleAPI):
     def __repr__(self):
         return f"[GraphAPI.{self._token[:8]}]"
 
-    def safe_request(self, method: Literal["GET", "POST", "PATCH"], path: str, is_async: bool = True, **kwargs):
-        from .pkg_safe_request import safe_request, sync_safe_request
-        if is_async:
-            return safe_request(self, method, path, **kwargs)
-        else:
-            return sync_safe_request(self, method, path, **kwargs)
+    async def safe_request(self, method: Literal["GET", "POST", "PATCH", "DELETE"], path: str, **kwargs):
+        from .pkg_safe_request import safe_request
+        return await safe_request(self, method, path, **kwargs)
+
+    def sync_safe_request(self, method: Literal["GET", "POST", "PATCH", "DELETE"], path: str, **kwargs):
+        from .pkg_safe_request import sync_safe_request
+        return sync_safe_request(self, method, path, **kwargs)
 
 
 class _GraphAPIProperties(_GraphAPIInit):
