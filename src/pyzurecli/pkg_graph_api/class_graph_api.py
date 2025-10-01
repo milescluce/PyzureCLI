@@ -19,7 +19,8 @@ class _GraphAPIInit(SimpleAPI):
             base_url=f"https://graph.microsoft.com/{self._version}",
             headers={
                 "Authorization": f"Bearer {self._token}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
             }
         )
         if _debug: self.to_pickle("test_graph_api")
@@ -27,7 +28,7 @@ class _GraphAPIInit(SimpleAPI):
     def __repr__(self):
         return f"[GraphAPI.{self._token[:8]}]"
 
-    def safe_request(self, method: Literal["GET", "POST"], path: str, is_async: bool = True, **kwargs):
+    def safe_request(self, method: Literal["GET", "POST", "PATCH"], path: str, is_async: bool = True, **kwargs):
         from .pkg_safe_request import safe_request, sync_safe_request
         if is_async:
             return safe_request(self, method, path, **kwargs)
@@ -95,6 +96,11 @@ class _GraphAPIMethods(_GraphAPIProperties):
     async def get_conversation(self, conversation_id: str, get_message_content: bool = True, top: Annotated[int, validate_range(1, 999)] = 999):
         from .pkg_messages import get_conversation
         return await get_conversation(self, conversation_id, get_message_content, top)
+
+    @cached_property
+    def todo(self):
+        from .pkg_todos import ToDo
+        return ToDo(self)
 
 class GraphAPI(_GraphAPIMethods):
     def __init__(self, token: str, version: str = "v1.0", email_filters: list | None = None,

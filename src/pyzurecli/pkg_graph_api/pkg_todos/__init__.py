@@ -1,6 +1,6 @@
-from typing import Literal, Dict
+from typing import Literal, Dict, Optional
 
-from .. import GraphAPI
+from .. import _GraphAPIMethods
 
 class DueDateTime(dict):
     def __init__(self, dateTime: str, timeZone: str):
@@ -9,7 +9,7 @@ class DueDateTime(dict):
         self["timeZone"] = timeZone
 
 class ToDo:
-    def __init__(self, graph: GraphAPI):
+    def __init__(self, graph: _GraphAPIMethods):
         self.graph = graph
 
     def get_lists(self):
@@ -26,28 +26,57 @@ class ToDo:
         response = self.graph.safe_request(
             method="POST",
             path="/me/todo/lists",
-            data=data
+            json=data
         )
         return response
 
-    def delete_list(self, id):
-        pass
+    def delete_list(self, id: str):
+        response = self.graph.safe_request(
+            method="DELETE",
+            path=f"/me/todo/lists/{id}"
+        )
+        return response
 
-    def post_task(self, taskListId: str, title: str, body: str, importance: Literal["low", "normal", "high"], status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"], dueDateTime: DueDateTime, isReminderOn: bool = False):
+    def post_task(self, taskListId: str, title: str, body: str = None, importance: Literal["low", "normal", "high"] = None, status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None, dueDateTime: DueDateTime = None, isReminderOn: bool = False):
         data = {}
-        if title: data["title"] = "title"
-        if body: data["body"] = "body"
+        if title: data["title"] = title
+        if body: data["body"] = {"content": body, "contentType": "text"}
         if importance: data["importance"] = importance
         if status: data["status"] = status
         if dueDateTime: data["dueDateTime"] = dueDateTime
         if isReminderOn: data["isReminderOn"] = isReminderOn
         response = self.graph.safe_request(
             method="POST",
-            path=f"me/todo/lists/{taskListId}/tasks",
-            data=data
+            path=f"/me/todo/lists/{taskListId}/tasks",
+            json=data
         )
         return response
 
-    def patch_task(self):
+    def patch_task(self, taskListId: str, taskId: str, title: str = None, body: str = None, importance: Literal["low", "normal", "high"] = None, status: Literal["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"] = None, dueDateTime: DueDateTime = None, isReminderOn: bool = None):
         data = {}
-    
+        if title: data["title"] = title
+        if body: data["body"] = {"content": body, "contentType": "text"}
+        if importance: data["importance"] = importance
+        if status: data["status"] = status
+        if dueDateTime: data["dueDateTime"] = dueDateTime
+        if isReminderOn is not None: data["isReminderOn"] = isReminderOn
+        response = self.graph.safe_request(
+            method="PATCH",
+            path=f"/me/todo/lists/{taskListId}/tasks/{taskId}",
+            json=data
+        )
+        return response
+
+    def delete_task(self, taskListId: str, taskId: str):
+        response = self.graph.safe_request(
+            method="DELETE",
+            path=f"/me/todo/lists/{taskListId}/tasks/{taskId}"
+        )
+        return response
+
+    def get_tasks(self, taskListId: str):
+        response = self.graph.safe_request(
+            method="GET",
+            path=f"/me/todo/lists/{taskListId}/tasks"
+        )
+        return response
