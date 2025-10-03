@@ -53,12 +53,12 @@ class _GraphAPIProperties(_GraphAPIInit):
 
     @property
     def me(self):
-        response = self.sync_safe_request(method="GET", path="me", is_async=False)
+        response = self.sync_safe_request(method="GET", path="me")
         return Me(**response.body)
 
     @property
     def organization(self):
-        response = self.sync_safe_request(method="GET", path="organization", is_async=False)
+        response = self.sync_safe_request(method="GET", path="organization")
         val = response.body.get("value")[0]
         return Organization(**val)
 
