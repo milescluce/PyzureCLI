@@ -4,7 +4,8 @@ from functools import cached_property
 from pathlib import Path
 from types import SimpleNamespace
 
-from dockwershell import path_to_wsl, DockerImage
+from dockwershell import DockerImage
+from dockwershell.pkg_docker.mod_docker_image import path_to_wsl
 from loguru import logger as log
 
 from .factory import AzureCLI

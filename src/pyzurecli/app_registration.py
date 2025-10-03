@@ -63,7 +63,7 @@ class AzureCLIAppRegistration:
             )
 
         if not result.json: raise RuntimeError(f"{self}: OAuth app registration creation failed")
-        app_data = result.json[0]
+        app_data = result.json
         if "Found an existing application" in result.output:
             log.success(f"{self}: Successfully patched multi-tenant app: {app_data['appId']}")
         else:

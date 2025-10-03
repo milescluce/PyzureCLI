@@ -23,7 +23,6 @@ class _GraphAPIInit(SimpleAPI):
                 # "Prefer": "return=representation"
             }
         )
-        if _debug: self.to_pickle("test_graph_api")
 
     def __repr__(self):
         return f"[GraphAPI.{self._token[:8]}]"
@@ -54,12 +53,12 @@ class _GraphAPIProperties(_GraphAPIInit):
 
     @property
     def me(self):
-        response = self.safe_request(method="GET", path="me", is_async=False)
+        response = self.sync_safe_request(method="GET", path="me", is_async=False)
         return Me(**response.body)
 
     @property
     def organization(self):
-        response = self.safe_request(method="GET", path="organization", is_async=False)
+        response = self.sync_safe_request(method="GET", path="organization", is_async=False)
         val = response.body.get("value")[0]
         return Organization(**val)
 

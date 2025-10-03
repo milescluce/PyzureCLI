@@ -59,7 +59,7 @@ class AzureCLI:
     @cached_property
     def graph_api(self):
         result = self.user.image.run("az account get-access-token")
-        result = result.json[0]
+        result = result.json
         log.debug(f"{self}: Retrieved GraphAPI metadata: {result}")
         token = result["accessToken"]
         log.debug(f"{self}: Retrieved token {token[:4]}...")
@@ -99,7 +99,6 @@ class AzureCLI:
 
 def debug():
     AzureCLI(Path.cwd())
-
 
 if __name__ == "__main__":
     debug()
